@@ -1,0 +1,4 @@
+{
+  "name": "{{ faker.name.last_name }}",
+  "description": "Fantastic Steel Salad Pa'anga Small"
+}

@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+import "schema/friend.proto";
+
+package protoservice.friend;
+
+service FriendService {
+  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
+  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
+  rpc RejectFriendRequest(RejectFriendRequestRequest) returns (RejectFriendRequestResponse);
+  rpc GetFriends(GetFriendsRequest) returns (GetFriendsResponse);
+}
+
+message SendFriendRequestRequest {
+  int32 user_id = 1 ;
+  int32 friend_id = 2 ;
+}
+
+message SendFriendRequestResponse {
+  bool success = 1;
+}
+
+message AcceptFriendRequestRequest {
+  int32 friend_request_id = 1 ;
+}
+
+message AcceptFriendRequestResponse {
+  bool success = 1;
+}
+
+message RejectFriendRequestRequest {
+  int32 friend_request_id = 1 ;
+}
+
+message RejectFriendRequestResponse {
+  bool success = 1;
+}
+
+message GetFriendsRequest {
+  int32 user_id = 1 ;
+}
+
+message GetFriendsResponse {
+  repeated protoschema.Friend friends = 1;
+}

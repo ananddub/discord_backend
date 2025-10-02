@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+import "schema/permission.proto";
+
+package protoservice.permission;
+
+service PermissionService {
+  rpc CreatePermission(CreatePermissionRequest) returns (CreatePermissionResponse);
+  rpc GetPermissions(GetPermissionsRequest) returns (GetPermissionsResponse);
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc GetRoles(GetRolesRequest) returns (GetRolesResponse);
+}
+
+message CreatePermissionRequest {
+  string name = 1 ;
+  string description = 2;
+}
+
+message CreatePermissionResponse {
+  protoschema.Permission permission = 1;
+  bool success = 2;
+}
+
+message GetPermissionsRequest {}
+
+message GetPermissionsResponse {
+  repeated protoschema.Permission permissions = 1;
+}
+
+message CreateRoleRequest {
+  string name = 1 ;
+  string description = 2;
+}
+
+message CreateRoleResponse {
+  protoschema.Role role = 1;
+  bool success = 2;
+}
+
+message GetRolesRequest {}
+
+message GetRolesResponse {
+  repeated protoschema.Role roles = 1;
+}

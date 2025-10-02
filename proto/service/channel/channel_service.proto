@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+import "schema/channel.proto";
+
+package protoservice.channel;
+
+service ChannelService {
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
+  rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse);
+  rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse);
+}
+
+message CreateChannelRequest {
+  string name = 1 ;
+  string description = 2 ;
+}
+
+message CreateChannelResponse {
+  protoschema.Channel channel = 1;
+  bool success = 2;
+}
+
+message GetChannelRequest {
+  int32 channel_id = 1 ;
+}
+
+message GetChannelResponse {
+  protoschema.Channel channel = 1;
+}
+
+message JoinChannelRequest {
+  int32 channel_id = 1 ;
+  int32 user_id = 2 ;
+}
+
+message JoinChannelResponse {
+  bool success = 1;
+}
+
+message LeaveChannelRequest {
+  int32 channel_id = 1 ;
+  int32 user_id = 2 ;
+}
+
+message LeaveChannelResponse {
+  bool success = 1;
+}

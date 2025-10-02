@@ -1,0 +1,3 @@
+driver: "postgres"
+dbstring: "${DATABASE_URL}"
+dir: "sql/migrations"

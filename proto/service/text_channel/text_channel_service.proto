@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+import "schema/text_channel.proto";
+
+package protoservice.text_channel;
+
+service TextChannelService {
+  rpc CreateTextGroup(CreateTextGroupRequest) returns (CreateTextGroupResponse);
+  rpc CreateTextChannel(CreateTextChannelRequest) returns (CreateTextChannelResponse);
+  rpc ArchiveTextChannel(ArchiveTextChannelRequest) returns (ArchiveTextChannelResponse);
+}
+
+message CreateTextGroupRequest {
+  string channel_id = 1 ;
+  string topic = 2 ;
+}
+
+message CreateTextGroupResponse {
+  protoschema.TextGroup text_group = 1;
+  bool success = 2;
+}
+
+message CreateTextChannelRequest {
+  int32 group_id = 1 ;
+  string topic = 2 ;
+}
+
+message CreateTextChannelResponse {
+  protoschema.TextChannel text_channel = 1;
+  bool success = 2;
+}
+
+message ArchiveTextChannelRequest {
+  int32 text_channel_id = 1 ;
+}
+
+message ArchiveTextChannelResponse {
+  bool success = 1;
+}

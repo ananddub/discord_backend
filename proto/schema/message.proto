@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/schema";
+package protoschema;
+
+message Message {
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 sender_id = 3;
+  int32 reply_to_message_id = 4;
+  string content = 5;
+  bool is_read = 6;
+  int64 created_at = 7;
+}
+
+message TextMessage {
+  int32 id = 1;
+  int32 text_channel_id = 2;
+  int32 sender_id = 3;
+  int32 reply_to_message_id = 4;
+  string content = 5;
+  int64 sent_at = 6;
+  bool is_edited = 7;
+  int64 created_at = 8;
+}

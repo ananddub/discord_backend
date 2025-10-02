@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+import "schema/user.proto";
+
+package protoservice.user;
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+}
+
+message GetUserRequest {
+  int32 user_id = 1 ;
+}
+
+message GetUserResponse {
+  protoschema.User user = 1;
+  bool success = 2;
+}
+
+message UpdateUserRequest {
+  protoschema.User user = 1 ;
+}
+
+message UpdateUserResponse {
+  protoschema.User user = 1;
+  bool success = 2;
+}
+
+message GetUserProfileRequest {
+  int32 user_id = 1 ;
+}
+
+message GetUserProfileResponse {
+  protoschema.User user = 1;
+}

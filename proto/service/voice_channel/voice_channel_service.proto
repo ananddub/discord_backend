@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+import "schema/voice_channel.proto";
+
+package protoservice.voice_channel;
+
+service VoiceChannelService {
+  rpc CreateVoiceChannel(CreateVoiceChannelRequest) returns (CreateVoiceChannelResponse);
+  rpc JoinVoiceChannel(JoinVoiceChannelRequest) returns (JoinVoiceChannelResponse);
+  rpc LeaveVoiceChannel(LeaveVoiceChannelRequest) returns (LeaveVoiceChannelResponse);
+  rpc SendVoiceChat(SendVoiceChatRequest) returns (SendVoiceChatResponse);
+}
+
+message CreateVoiceChannelRequest {
+  int32 channel_id = 1 ;
+}
+
+message CreateVoiceChannelResponse {
+  protoschema.VoiceChannel voice_channel = 1;
+  bool success = 2;
+}
+
+message JoinVoiceChannelRequest {
+  int32 voice_channel_id = 1 ;
+  int32 user_id = 2 ;
+}
+
+message JoinVoiceChannelResponse {
+  bool success = 1;
+}
+
+message LeaveVoiceChannelRequest {
+  int32 voice_channel_id = 1 ;
+  int32 user_id = 2 ;
+}
+
+message LeaveVoiceChannelResponse {
+  bool success = 1;
+}
+
+message SendVoiceChatRequest {
+  int32 voice_channel_id = 1 ;
+  string chat = 2 ;
+}
+
+message SendVoiceChatResponse {
+  protoschema.VoiceChat voice_chat = 1;
+  bool success = 2;
+}

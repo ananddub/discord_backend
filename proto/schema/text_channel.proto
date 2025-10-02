@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/schema";
+package protoschema;
+
+message TextGroup {
+  int32 id = 1;
+  string channel_id = 2;
+  string topic = 3;
+  int64 created_at = 4;
+}
+
+message TextChannel {
+  int32 id = 1;
+  int32 group_id = 2;
+  string topic = 3;
+  bool is_archived = 4;
+  double archived_at = 5;
+  int64 created_at = 6;
+}

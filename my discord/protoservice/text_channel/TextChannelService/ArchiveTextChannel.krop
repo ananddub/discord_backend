@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "protoservice.text_channel.TextChannelService.ArchiveTextChannel"
+  },
+  "requests": [
+    {
+      "location": "ArchiveTextChannel-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "998886bf-302d-4977-a00c-05bb0dc1c1dc"
+}

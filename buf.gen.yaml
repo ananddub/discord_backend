@@ -1,0 +1,21 @@
+version: v2
+inputs:
+  - directory: .
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.5
+    out: gen/proto
+    opt:
+      - paths=source_relative
+  - remote: buf.build/grpc/go:v1.5.1
+    out: gen/proto
+    opt:
+      - paths=source_relative
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: discord/gen/proto
+  # Don't modify any file option or field option for protovalidate
+  disable:
+    - file_option: go_package
+      module: buf.build/bufbuild/protovalidate

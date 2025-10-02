@@ -1,0 +1,7 @@
+tmp/
+*.db
+.env
+build-errors.log
+bin/
+config.yml
+.DS_Store

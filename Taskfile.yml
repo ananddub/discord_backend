@@ -1,0 +1,52 @@
+version: '3'
+
+tasks:
+  proto:
+    desc: Generate protobuf files using local protoc
+    cmds:
+      - chmod +x generate_local.sh
+      - ./generate_local.sh
+      - echo "Protobuf files generated"
+  clean:
+    desc: Clean generated files
+    cmds:
+      - find . -name "*.pb.go" -delete
+
+  build:
+    desc: Build the application
+    deps: [proto]
+    cmds:
+      - go build -o bin/discord ./cmd/server
+
+  run:
+    desc: Run the application
+    deps: [build]
+    cmds:
+      - ./bin/discord
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test ./...
+
+  deps:
+    desc: Install dependencies
+    cmds:
+      - go mod tidy
+      - go install github.com/bufbuild/buf/cmd/buf@latest
+
+  lint:
+    desc: Lint proto files
+    cmds:
+      - buf lint
+
+  sqlc:
+    desc: Generate SQLC files
+    cmds:
+      - sqlc generate
+      - echo "SQLC files generated"
+  generate:
+    desc: Generate protobuf files
+    cmds:
+      - echo ""
+    deps: [proto,sqlc]

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/schema";
+package protoschema;
+
+message VoiceChannel {
+  int32 id = 1;
+  int32 channel_id = 2;
+  bool is_active = 3;
+  double started_at = 4;
+  double ended_at = 5;
+  int64 created_at = 6;
+}
+
+message VoiceChat {
+  int32 id = 1;
+  int32 voice_channel_id = 2;
+  int32 user_id = 3;
+  string chat = 4;
+  int32 replay_to_message_id = 5;
+  int64 joined_at = 6;
+  double left_at = 7;
+  int64 created_at = 8;
+}
