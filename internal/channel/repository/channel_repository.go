@@ -137,3 +137,17 @@ func (r *ChannelRepository) DeleteUserChannelPermissions(ctx context.Context, ch
 		UserID:    pgtype.Int4{Int32: userID, Valid: true},
 	})
 }
+
+// GetServerMembers gets members of a server
+func (r *ChannelRepository) GetServerMembers(ctx context.Context, serverID int32, limit, offset int32) ([]repo.ServerMember, error) {
+	return r.queries.GetServerMembers(ctx, repo.GetServerMembersParams{
+		ServerID: serverID,
+		Limit:    limit,
+		Offset:   offset,
+	})
+}
+
+// GetChannelVoiceStates gets voice states for a channel
+func (r *ChannelRepository) GetChannelVoiceStates(ctx context.Context, channelID int32) ([]repo.VoiceState, error) {
+	return r.queries.GetChannelVoiceStates(ctx, channelID)
+}

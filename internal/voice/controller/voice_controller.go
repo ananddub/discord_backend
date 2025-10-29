@@ -102,10 +102,10 @@ func (c *VoiceController) SendVoiceChat(ctx context.Context, req *voicePb.SendVo
 	// TODO: Implement actual voice chat message handling
 	return &voicePb.SendVoiceChatResponse{
 		VoiceChat: &schema.VoiceChat{
-			Id:        1, // Placeholder
-			ChannelId: req.GetVoiceChannelId(),
-			UserId:    userID,
-			Chat:      req.GetChat(),
+			Id:             1, // Placeholder
+			VoiceChannelId: req.GetVoiceChannelId(),
+			UserId:         userID,
+			Chat:           req.GetChat(),
 		},
 		Success: true,
 	}, nil

@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "protoservice.auth.AuthService.Verify2FA"
+  },
+  "requests": [
+    {
+      "location": "Verify2FA-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "76efa332-c68a-4c4a-8c99-d21919e8ee6e"
+}

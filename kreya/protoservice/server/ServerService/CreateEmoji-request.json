@@ -1,0 +1,9 @@
+{
+  "serverId": 823,
+  "name": "{{ faker.name.last_name }}",
+  "image": "Minnesota Integration",
+  "roleIds": [
+    625,
+    166
+  ]
+}

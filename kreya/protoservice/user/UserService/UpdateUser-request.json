@@ -1,0 +1,20 @@
+{
+  "user": {
+    "id": 66,
+    "username": "Spring connecting Street",
+    "email": "{{ faker.internet.example_email }}",
+    "fullName": "{{ faker.name.full_name }}",
+    "profilePic": "synthesize Licensed Plastic Mouse Louisiana",
+    "bio": "Networked interactive Pike",
+    "createdAt": "820",
+    "updatedAt": "735",
+    "colorCode": "Wells Malaysia",
+    "backgroundColor": "Product instruction set",
+    "backgroundPic": "magnetic",
+    "status": "eyeballs Kip",
+    "userStatus": "OFFLINE",
+    "customStatus": "payment Turnpike",
+    "isBot": false,
+    "isVerified": false
+  }
+}

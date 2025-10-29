@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "protoservice.server.ServerService.GetInvite"
+  },
+  "requests": [
+    {
+      "location": "GetInvite-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "76efa332-c68a-4c4a-8c99-d21919e8ee6e"
+}

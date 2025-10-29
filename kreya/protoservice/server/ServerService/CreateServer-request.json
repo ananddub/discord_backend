@@ -1,0 +1,7 @@
+{
+  "name": "{{ faker.name.last_name }}",
+  "icon": "Dynamic",
+  "description": "user-facing Buckinghamshire",
+  "ownerId": 861,
+  "region": "deposit JSON"
+}

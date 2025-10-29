@@ -30,14 +30,14 @@ func (c *ChannelController) CreateChannel(ctx context.Context, req *channelPb.Cr
 	// Basic implementation - using defaults for missing proto fields
 	channel, err := c.channelService.CreateChannel(
 		ctx,
-		1, // server_id - should come from context/request
+		req.ServerId,
 		req.GetName(),
-		"TEXT",               // default type
-		nil,                  // no category
-		0,                    // position
-		req.GetDescription(), // using description as topic
-		false,                // not NSFW
-		0,                    // no slowmode
+		req.GetType(),
+		nil,
+		0,
+		req.GetDescription(),
+		false,
+		0,
 	)
 	if err != nil {
 		return nil, commonErrors.ToGRPCError(err)
@@ -242,24 +242,27 @@ func (c *ChannelController) GetChannelMembers(req *channelPb.GetChannelMembersRe
 		return commonErrors.ToGRPCError(err)
 	}
 
-	// For voice channels, we could stream voice_states
-	// For text channels, we would stream server_members with permission to view the channel
-	// This would require server_members service integration
+	// Get server members with access to this channel
+	members, err := c.channelService.GetChannelMembers(ctx, channel.ServerId, req.GetChannelId())
+	if err != nil {
+		return commonErrors.ToGRPCError(err)
+	}
 
-	// Mock implementation - in production, this would query and stream actual members
-	// based on channel type and permissions
-	_ = channel
+	// Convert to proto format
+	memberInfos := make([]*channelPb.ChannelMemberInfo, len(members))
+	for i, member := range members {
+		memberInfos[i] = &channelPb.ChannelMemberInfo{
+			UserId:     member.UserId,
+			IsMuted:    member.IsMuted,
+			IsDeafened: member.IsDeafened,
+			JoinedAt:   member.JoinedAt,
+		}
+	}
 
-	// Example streaming pattern (would be replaced with actual member data):
-	// for _, member := range members {
-	//     if err := stream.Send(&channelPb.GetChannelMembersResponse{
-	//         Members: member,
-	//     }); err != nil {
-	//         return err
-	//     }
-	// }
-
-	return nil
+	// Send response
+	return stream.Send(&channelPb.GetChannelMembersResponse{
+		Members: memberInfos,
+	})
 }
 
 // UpdateChannelPermissions updates channel permissions for role or user

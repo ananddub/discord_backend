@@ -19,16 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Register_FullMethodName       = "/service.auth.AuthService/Register"
-	AuthService_Login_FullMethodName          = "/service.auth.AuthService/Login"
-	AuthService_Logout_FullMethodName         = "/service.auth.AuthService/Logout"
-	AuthService_RefreshToken_FullMethodName   = "/service.auth.AuthService/RefreshToken"
-	AuthService_VerifyEmail_FullMethodName    = "/service.auth.AuthService/VerifyEmail"
-	AuthService_ForgotPassword_FullMethodName = "/service.auth.AuthService/ForgotPassword"
-	AuthService_ResetPassword_FullMethodName  = "/service.auth.AuthService/ResetPassword"
-	AuthService_ChangePassword_FullMethodName = "/service.auth.AuthService/ChangePassword"
-	AuthService_Enable2FA_FullMethodName      = "/service.auth.AuthService/Enable2FA"
-	AuthService_Verify2FA_FullMethodName      = "/service.auth.AuthService/Verify2FA"
+	AuthService_Register_FullMethodName       = "/protoservice.auth.AuthService/Register"
+	AuthService_Login_FullMethodName          = "/protoservice.auth.AuthService/Login"
+	AuthService_Logout_FullMethodName         = "/protoservice.auth.AuthService/Logout"
+	AuthService_RefreshToken_FullMethodName   = "/protoservice.auth.AuthService/RefreshToken"
+	AuthService_VerifyEmail_FullMethodName    = "/protoservice.auth.AuthService/VerifyEmail"
+	AuthService_ForgotPassword_FullMethodName = "/protoservice.auth.AuthService/ForgotPassword"
+	AuthService_ResetPassword_FullMethodName  = "/protoservice.auth.AuthService/ResetPassword"
+	AuthService_ChangePassword_FullMethodName = "/protoservice.auth.AuthService/ChangePassword"
+	AuthService_Enable2FA_FullMethodName      = "/protoservice.auth.AuthService/Enable2FA"
+	AuthService_Verify2FA_FullMethodName      = "/protoservice.auth.AuthService/Verify2FA"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -414,7 +414,7 @@ func _AuthService_Verify2FA_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AuthService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "service.auth.AuthService",
+	ServiceName: "protoservice.auth.AuthService",
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

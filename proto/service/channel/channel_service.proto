@@ -33,7 +33,9 @@ service ChannelService {
 
 message CreateChannelRequest {
   string name = 1 ;
-  string description = 2 ;
+  int32 server_id = 2 ;
+  string type = 3 ;
+  string description = 4 ;
 }
 
 message CreateChannelResponse {

@@ -1,0 +1,147 @@
+syntax = "proto3";
+option go_package = "discord/gen/proto/service/sync";
+
+package protoservice.sync;
+
+import "schema/user.proto";
+import "schema/friend.proto";
+import "schema/message.proto";
+import "schema/channel.proto";
+import "schema/voice_channel.proto";
+import "schema/text_channel.proto";
+import "schema/direct_message.proto";
+import "schema/permission.proto";
+
+service SyncService {
+    rpc SyncFriends(SyncDataRequest) returns (SyncFriendsResponse);
+    rpc SyncMessages(SyncDataRequest) returns (SyncMessagesResponse);
+    rpc SyncServers(SyncDataRequest) returns (SyncServersResponse);
+    rpc SyncChannels(SyncDataRequest) returns (SyncChannelsResponse);
+    rpc SyncUserProfile(SyncDataRequest) returns (SyncUserProfileResponse);
+    rpc SyncVoiceChannels(SyncDataRequest) returns (SyncVoiceChannelsResponse);
+    rpc SyncTextChannels(SyncDataRequest) returns (SyncTextChannelsResponse);
+    rpc SyncDirectMessages(SyncDataRequest) returns (SyncDirectMessagesResponse);
+    rpc SyncPermissions(SyncDataRequest) returns (SyncPermissionsResponse);
+    rpc SyncAll(SyncAllRequest) returns (SyncAllResponse);
+}
+
+// Request Messages
+message SyncDataRequest {
+  int32 user_id = 1;
+  int64 last_updated_at = 2; // Client's last sync timestamp for this specific entity (unix milliseconds)
+  int32 limit = 3; // Optional: pagination limit
+  int32 offset = 4; // Optional: pagination offset
+}
+
+message SyncAllRequest {
+  int32 user_id = 1;
+  int64 friends_last_updated_at = 2; // Last sync time for friends table
+  int64 messages_last_updated_at = 3; // Last sync time for messages table
+  int64 servers_last_updated_at = 4; // Last sync time for servers table
+  int64 channels_last_updated_at = 5; // Last sync time for channels table
+  int64 user_profile_last_updated_at = 6; // Last sync time for user profile
+  int64 voice_channels_last_updated_at = 7; // Last sync time for voice channels
+  int64 text_channels_last_updated_at = 8; // Last sync time for text channels
+  int64 direct_messages_last_updated_at = 9; // Last sync time for direct messages
+  int64 permissions_last_updated_at = 10; // Last sync time for permissions
+}
+
+// Response Messages
+message SyncFriendsResponse {
+  repeated protoschema.Friend friends = 1; // Friends updated after last_updated_at
+  repeated protoschema.Friend pending_requests = 2; // Pending requests
+  repeated int32 deleted_friend_ids = 3; // IDs of deleted friendships
+  int64 server_timestamp = 4; // Current server timestamp
+  bool is_synced = 5; // true if client is up to date
+  int32 total_updates = 6; // Total number of updates
+  string message = 7;
+}
+
+message SyncMessagesResponse {
+  repeated protoschema.Message messages = 1; // Messages updated after last_updated_at
+  repeated int32 deleted_message_ids = 2; // IDs of deleted messages
+  int64 server_timestamp = 3;
+  bool is_synced = 4; // true if no new messages
+  int32 total_updates = 5;
+  bool has_more = 6; // true if pagination needed
+  string message = 7;
+}
+
+message SyncServersResponse {
+  repeated protoschema.Server servers = 1; // Servers updated after last_updated_at
+  repeated int32 deleted_server_ids = 2;
+  int64 server_timestamp = 3;
+  bool is_synced = 4; // true if client has latest data
+  int32 total_updates = 5;
+  string message = 6;
+}
+
+message SyncChannelsResponse {
+  repeated protoschema.Channel channels = 1; // Channels updated after last_updated_at
+  repeated int32 deleted_channel_ids = 2;
+  int64 server_timestamp = 3;
+  bool is_synced = 4;
+  int32 total_updates = 5;
+  string message = 6;
+}
+
+message SyncUserProfileResponse {
+  protoschema.User user = 1; // Updated user data if changed
+  int64 server_timestamp = 2;
+  bool is_synced = 3; // true if profile not updated
+  int64 last_profile_update = 4; // When profile was last updated
+  string message = 5;
+}
+
+message SyncVoiceChannelsResponse {
+  repeated protoschema.VoiceChannel voice_channels = 1; // Voice channels updated after last_updated_at
+  repeated int32 deleted_voice_channel_ids = 2;
+  int64 server_timestamp = 3;
+  bool is_synced = 4;
+  int32 total_updates = 5;
+  string message = 6;
+}
+
+message SyncTextChannelsResponse {
+  repeated protoschema.TextChannel text_channels = 1; // Text channels updated after last_updated_at
+  repeated int32 deleted_text_channel_ids = 2;
+  int64 server_timestamp = 3;
+  bool is_synced = 4;
+  int32 total_updates = 5;
+  string message = 6;
+}
+
+message SyncDirectMessagesResponse {
+  repeated protoschema.DirectMessage direct_messages = 1; // DMs updated after last_updated_at
+  repeated int32 deleted_dm_ids = 2;
+  int64 server_timestamp = 3;
+  bool is_synced = 4;
+  int32 total_updates = 5;
+  bool has_more = 6;
+  string message = 7;
+}
+
+message SyncPermissionsResponse {
+  repeated protoschema.Permission permissions = 1; // Permissions updated after last_updated_at
+  repeated int32 deleted_permission_ids = 2;
+  int64 server_timestamp = 3;
+  bool is_synced = 4;
+  int32 total_updates = 5;
+  string message = 6;
+}
+
+message SyncAllResponse {
+  SyncFriendsResponse friends = 1;
+  SyncMessagesResponse messages = 2;
+  SyncServersResponse servers = 3;
+  SyncChannelsResponse channels = 4;
+  SyncUserProfileResponse user_profile = 5;
+  SyncVoiceChannelsResponse voice_channels = 6;
+  SyncTextChannelsResponse text_channels = 7;
+  SyncDirectMessagesResponse direct_messages = 8;
+  SyncPermissionsResponse permissions = 9;
+  int64 server_timestamp = 10; // Current server timestamp
+  bool is_fully_synced = 11; // true if all data is up to date
+  int32 total_updates = 12; // Total updates across all entities
+  string message = 13;
+}

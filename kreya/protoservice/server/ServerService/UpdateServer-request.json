@@ -1,0 +1,8 @@
+{
+  "serverId": 939,
+  "name": "{{ faker.name.last_name }}",
+  "icon": "Baby Senior Barbados Dollar",
+  "banner": "Associate Fantastic Rubber Towels",
+  "description": "e-business",
+  "region": "Nicaragua"
+}

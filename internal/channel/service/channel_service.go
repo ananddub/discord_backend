@@ -200,6 +200,61 @@ func (s *ChannelService) DeleteChannelPermission(ctx context.Context, permission
 	return s.channelRepo.DeleteChannelPermission(ctx, permissionID)
 }
 
+// GetChannelMembers gets members who have access to a channel
+func (s *ChannelService) GetChannelMembers(ctx context.Context, serverID, channelID int32) ([]ChannelMemberInfo, error) {
+	// Get server members
+	members, err := s.channelRepo.GetServerMembers(ctx, serverID, 1000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get voice states for this channel (if it's a voice channel)
+	voiceStates, _ := s.channelRepo.GetChannelVoiceStates(ctx, channelID)
+	voiceStateMap := make(map[int32]*repo.VoiceState)
+	for _, vs := range voiceStates {
+		voiceStateMap[vs.UserID] = &vs
+	}
+
+	// Build member info list
+	memberInfos := make([]ChannelMemberInfo, 0, len(members))
+	for _, member := range members {
+		info := ChannelMemberInfo{
+			UserId:   member.UserID,
+			JoinedAt: member.JoinedAt.Time.UnixMilli(),
+		}
+
+		if member.Nickname.Valid {
+			info.Nickname = member.Nickname.String
+		}
+
+		// Add voice state info if user is in voice channel
+		if vs, exists := voiceStateMap[member.UserID]; exists {
+			if vs.IsMuted.Valid {
+				info.IsMuted = vs.IsMuted.Bool
+			}
+			if vs.IsDeafened.Valid {
+				info.IsDeafened = vs.IsDeafened.Bool
+			}
+		}
+
+		memberInfos = append(memberInfos, info)
+	}
+
+	return memberInfos, nil
+}
+
+// ChannelMemberInfo represents member information for a channel
+type ChannelMemberInfo struct {
+	UserId     int32
+	Username   string
+	Nickname   string
+	ProfilePic string
+	Status     string
+	JoinedAt   int64
+	IsMuted    bool
+	IsDeafened bool
+}
+
 // Helper function to convert repo.Channel to proto Channel
 func (s *ChannelService) toProtoChannel(channel *repo.Channel) *schema.Channel {
 	protoChannel := &schema.Channel{
