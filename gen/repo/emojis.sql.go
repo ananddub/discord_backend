@@ -16,7 +16,7 @@ INSERT INTO emojis (
     server_id, name, image_url, creator_id, require_colons, animated
 ) VALUES (
     $1, $2, $3, $4, $5, $6
-) RETURNING id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, created_at
+) RETURNING id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, is_deleted, created_at
 `
 
 type CreateEmojiParams struct {
@@ -48,24 +48,15 @@ func (q *Queries) CreateEmoji(ctx context.Context, arg CreateEmojiParams) (Emoji
 		&i.Managed,
 		&i.Animated,
 		&i.Available,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteEmoji = `-- name: DeleteEmoji :exec
-DELETE FROM emojis
-WHERE id = $1
-`
-
-func (q *Queries) DeleteEmoji(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteEmoji, id)
-	return err
-}
-
 const getEmojiByID = `-- name: GetEmojiByID :one
-SELECT id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, created_at FROM emojis
-WHERE id = $1 LIMIT 1
+SELECT id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, is_deleted, created_at FROM emojis
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetEmojiByID(ctx context.Context, id int32) (Emoji, error) {
@@ -81,14 +72,15 @@ func (q *Queries) GetEmojiByID(ctx context.Context, id int32) (Emoji, error) {
 		&i.Managed,
 		&i.Animated,
 		&i.Available,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getServerEmojis = `-- name: GetServerEmojis :many
-SELECT id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, created_at FROM emojis
-WHERE server_id = $1 AND available = TRUE
+SELECT id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, is_deleted, created_at FROM emojis
+WHERE server_id = $1 AND available = TRUE AND is_deleted = FALSE
 ORDER BY name
 `
 
@@ -111,6 +103,7 @@ func (q *Queries) GetServerEmojis(ctx context.Context, serverID int32) ([]Emoji,
 			&i.Managed,
 			&i.Animated,
 			&i.Available,
+			&i.IsDeleted,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -123,9 +116,30 @@ func (q *Queries) GetServerEmojis(ctx context.Context, serverID int32) ([]Emoji,
 	return items, nil
 }
 
+const hardDeleteEmoji = `-- name: HardDeleteEmoji :exec
+DELETE FROM emojis
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteEmoji(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteEmoji, id)
+	return err
+}
+
+const restoreEmoji = `-- name: RestoreEmoji :exec
+UPDATE emojis
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreEmoji(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreEmoji, id)
+	return err
+}
+
 const searchEmojis = `-- name: SearchEmojis :many
-SELECT id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, created_at FROM emojis
-WHERE server_id = $1 AND name ILIKE '%' || $2 || '%' AND available = TRUE
+SELECT id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, is_deleted, created_at FROM emojis
+WHERE server_id = $1 AND name ILIKE '%' || $2 || '%' AND available = TRUE AND is_deleted = FALSE
 ORDER BY name
 LIMIT $3
 `
@@ -155,6 +169,7 @@ func (q *Queries) SearchEmojis(ctx context.Context, arg SearchEmojisParams) ([]E
 			&i.Managed,
 			&i.Animated,
 			&i.Available,
+			&i.IsDeleted,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -167,13 +182,25 @@ func (q *Queries) SearchEmojis(ctx context.Context, arg SearchEmojisParams) ([]E
 	return items, nil
 }
 
+const softDeleteEmoji = `-- name: SoftDeleteEmoji :exec
+UPDATE emojis
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteEmoji(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteEmoji, id)
+	return err
+}
+
 const updateEmoji = `-- name: UpdateEmoji :one
 UPDATE emojis
 SET 
     name = COALESCE($1, name),
-    available = COALESCE($2, available)
-WHERE id = $3
-RETURNING id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, created_at
+    available = COALESCE($2, available),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $3 AND is_deleted = FALSE
+RETURNING id, server_id, name, image_url, creator_id, require_colons, managed, animated, available, is_deleted, created_at
 `
 
 type UpdateEmojiParams struct {
@@ -195,6 +222,7 @@ func (q *Queries) UpdateEmoji(ctx context.Context, arg UpdateEmojiParams) (Emoji
 		&i.Managed,
 		&i.Animated,
 		&i.Available,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err

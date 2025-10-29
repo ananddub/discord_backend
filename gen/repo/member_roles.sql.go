@@ -14,7 +14,7 @@ INSERT INTO member_roles (
     member_id, role_id
 ) VALUES (
     $1, $2
-) RETURNING id, member_id, role_id, assigned_at
+) RETURNING id, member_id, role_id, assigned_at, updated_at
 `
 
 type AssignRoleToMemberParams struct {
@@ -30,12 +30,13 @@ func (q *Queries) AssignRoleToMember(ctx context.Context, arg AssignRoleToMember
 		&i.MemberID,
 		&i.RoleID,
 		&i.AssignedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getMemberRoles = `-- name: GetMemberRoles :many
-SELECT r.id, r.server_id, r.name, r.color, r.hoist, r.position, r.permissions, r.mentionable, r.icon, r.description, r.is_default, r.created_at, r.updated_at FROM roles r
+SELECT r.id, r.server_id, r.name, r.color, r.hoist, r.position, r.permissions, r.mentionable, r.icon, r.description, r.is_default, r.is_deleted, r.created_at, r.updated_at FROM roles r
 INNER JOIN member_roles mr ON r.id = mr.role_id
 WHERE mr.member_id = $1
 ORDER BY r.position DESC
@@ -62,6 +63,7 @@ func (q *Queries) GetMemberRoles(ctx context.Context, memberID int32) ([]Role, e
 			&i.Icon,
 			&i.Description,
 			&i.IsDefault,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -76,7 +78,7 @@ func (q *Queries) GetMemberRoles(ctx context.Context, memberID int32) ([]Role, e
 }
 
 const getRoleMembers = `-- name: GetRoleMembers :many
-SELECT sm.id, sm.server_id, sm.user_id, sm.nickname, sm.joined_at, sm.is_muted, sm.is_deafened FROM server_members sm
+SELECT sm.id, sm.server_id, sm.user_id, sm.nickname, sm.joined_at, sm.is_muted, sm.is_deafened, sm.updated_at FROM server_members sm
 INNER JOIN member_roles mr ON sm.id = mr.member_id
 WHERE mr.role_id = $1
 `
@@ -98,6 +100,7 @@ func (q *Queries) GetRoleMembers(ctx context.Context, roleID int32) ([]ServerMem
 			&i.JoinedAt,
 			&i.IsMuted,
 			&i.IsDeafened,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

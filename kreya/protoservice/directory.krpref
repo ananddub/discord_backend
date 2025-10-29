@@ -1,0 +1,16 @@
+{
+  "settings": [
+    {
+      "options": {
+        "grpc": {
+          "metadata": [
+            {
+              "key": "authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3NjE4OTYxNTcsIm5iZiI6MTc2MTgwOTc1NywiaWF0IjoxNzYxODA5NzU3fQ.lQqYkxn-MTJU1QZZP5cIDRO6so3ltI254LVp15FwDuI"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -16,7 +16,7 @@ INSERT INTO message_attachments (
     message_id, file_url, file_name, file_type, file_size, width, height
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7
-) RETURNING id, message_id, file_url, file_name, file_type, file_size, width, height, created_at
+) RETURNING id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
 type CreateMessageAttachmentParams struct {
@@ -49,34 +49,15 @@ func (q *Queries) CreateMessageAttachment(ctx context.Context, arg CreateMessage
 		&i.FileSize,
 		&i.Width,
 		&i.Height,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteMessageAttachment = `-- name: DeleteMessageAttachment :exec
-DELETE FROM message_attachments
-WHERE id = $1
-`
-
-func (q *Queries) DeleteMessageAttachment(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteMessageAttachment, id)
-	return err
-}
-
-const deleteMessageAttachments = `-- name: DeleteMessageAttachments :exec
-DELETE FROM message_attachments
-WHERE message_id = $1
-`
-
-func (q *Queries) DeleteMessageAttachments(ctx context.Context, messageID int32) error {
-	_, err := q.db.Exec(ctx, deleteMessageAttachments, messageID)
-	return err
-}
-
 const getMessageAttachments = `-- name: GetMessageAttachments :many
-SELECT id, message_id, file_url, file_name, file_type, file_size, width, height, created_at FROM message_attachments
-WHERE message_id = $1
+SELECT id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at FROM message_attachments
+WHERE message_id = $1 AND is_deleted = FALSE
 `
 
 func (q *Queries) GetMessageAttachments(ctx context.Context, messageID int32) ([]MessageAttachment, error) {
@@ -97,6 +78,7 @@ func (q *Queries) GetMessageAttachments(ctx context.Context, messageID int32) ([
 			&i.FileSize,
 			&i.Width,
 			&i.Height,
+			&i.IsDeleted,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -107,4 +89,57 @@ func (q *Queries) GetMessageAttachments(ctx context.Context, messageID int32) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const hardDeleteMessageAttachment = `-- name: HardDeleteMessageAttachment :exec
+DELETE FROM message_attachments
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteMessageAttachment(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteMessageAttachment, id)
+	return err
+}
+
+const hardDeleteMessageAttachments = `-- name: HardDeleteMessageAttachments :exec
+DELETE FROM message_attachments
+WHERE message_id = $1
+`
+
+func (q *Queries) HardDeleteMessageAttachments(ctx context.Context, messageID int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteMessageAttachments, messageID)
+	return err
+}
+
+const restoreMessageAttachment = `-- name: RestoreMessageAttachment :exec
+UPDATE message_attachments
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreMessageAttachment(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreMessageAttachment, id)
+	return err
+}
+
+const softDeleteMessageAttachment = `-- name: SoftDeleteMessageAttachment :exec
+UPDATE message_attachments
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteMessageAttachment(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteMessageAttachment, id)
+	return err
+}
+
+const softDeleteMessageAttachments = `-- name: SoftDeleteMessageAttachments :exec
+UPDATE message_attachments
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE message_id = $1
+`
+
+func (q *Queries) SoftDeleteMessageAttachments(ctx context.Context, messageID int32) error {
+	_, err := q.db.Exec(ctx, softDeleteMessageAttachments, messageID)
+	return err
 }

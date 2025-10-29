@@ -7,23 +7,23 @@ INSERT INTO messages (
 
 -- name: GetMessageByID :one
 SELECT * FROM messages
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1;
 
 -- name: GetChannelMessages :many
 SELECT * FROM messages
-WHERE channel_id = $1
+WHERE channel_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetMessagesBefore :many
 SELECT * FROM messages
-WHERE channel_id = $1 AND id < $2
+WHERE channel_id = $1 AND id < $2 AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $3;
 
 -- name: GetMessagesAfter :many
 SELECT * FROM messages
-WHERE channel_id = $1 AND id > $2
+WHERE channel_id = $1 AND id > $2 AND is_deleted = FALSE
 ORDER BY created_at ASC
 LIMIT $3;
 
@@ -34,29 +34,44 @@ SET
     is_edited = TRUE,
     edited_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 RETURNING *;
 
--- name: DeleteMessage :exec
+-- name: SoftDeleteMessage :exec
+UPDATE messages
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: HardDeleteMessage :exec
 DELETE FROM messages
+WHERE id = $1;
+
+-- name: RestoreMessage :exec
+UPDATE messages
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1;
 
 -- name: PinMessage :exec
 UPDATE messages
 SET is_pinned = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
+WHERE id = $1 AND is_deleted = FALSE;
 
 -- name: UnpinMessage :exec
 UPDATE messages
 SET is_pinned = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
+WHERE id = $1 AND is_deleted = FALSE;
 
 -- name: GetPinnedMessages :many
 SELECT * FROM messages
-WHERE channel_id = $1 AND is_pinned = TRUE
+WHERE channel_id = $1 AND is_pinned = TRUE AND is_deleted = FALSE
 ORDER BY created_at DESC;
 
--- name: BulkDeleteMessages :exec
+-- name: BulkSoftDeleteMessages :exec
+UPDATE messages
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = ANY($1::int[]);
+
+-- name: BulkHardDeleteMessages :exec
 DELETE FROM messages
 WHERE id = ANY($1::int[]);
 
@@ -64,11 +79,12 @@ WHERE id = ANY($1::int[]);
 SELECT * FROM messages
 WHERE channel_id = $1 
   AND content ILIKE '%' || $2 || '%'
+  AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $4;
 
 -- name: GetUserMessages :many
 SELECT * FROM messages
-WHERE sender_id = $1
+WHERE sender_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;

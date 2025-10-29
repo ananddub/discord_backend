@@ -16,7 +16,7 @@ INSERT INTO users (
     username, email, password, full_name, profile_pic, bio
 ) VALUES (
     $1, $2, $3, $4, $5, $6
-) RETURNING id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at
+) RETURNING id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -54,26 +54,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsBot,
 		&i.IsVerified,
 		&i.Is2faEnabled,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users
-WHERE id = $1
-`
-
-func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteUser, id)
-	return err
-}
-
 const enable2FA = `-- name: Enable2FA :exec
 UPDATE users
 SET is_2fa_enabled = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 type Enable2FAParams struct {
@@ -87,8 +78,8 @@ func (q *Queries) Enable2FA(ctx context.Context, arg Enable2FAParams) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at FROM users
-WHERE email = $1 LIMIT 1
+SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at FROM users
+WHERE email = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -110,6 +101,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.IsBot,
 		&i.IsVerified,
 		&i.Is2faEnabled,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -117,8 +109,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at FROM users
-WHERE id = $1 LIMIT 1
+SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at FROM users
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
@@ -140,6 +132,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
 		&i.IsBot,
 		&i.IsVerified,
 		&i.Is2faEnabled,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -147,8 +140,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at FROM users
-WHERE username = $1 LIMIT 1
+SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at FROM users
+WHERE username = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User, error) {
@@ -170,14 +163,26 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.IsBot,
 		&i.IsVerified,
 		&i.Is2faEnabled,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const hardDeleteUser = `-- name: HardDeleteUser :exec
+DELETE FROM users
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteUser, id)
+	return err
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at FROM users
+SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at FROM users
+WHERE is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -212,6 +217,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.IsBot,
 			&i.IsVerified,
 			&i.Is2faEnabled,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -225,11 +231,23 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 	return items, nil
 }
 
+const restoreUser = `-- name: RestoreUser :exec
+UPDATE users
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreUser, id)
+	return err
+}
+
 const searchUsers = `-- name: SearchUsers :many
-SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at FROM users
-WHERE username ILIKE '%' || $1 || '%'
+SELECT id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at FROM users
+WHERE is_deleted = FALSE
+  AND (username ILIKE '%' || $1 || '%'
    OR email ILIKE '%' || $1 || '%'
-   OR full_name ILIKE '%' || $1 || '%'
+   OR full_name ILIKE '%' || $1 || '%')
 ORDER BY username
 LIMIT $2 OFFSET $3
 `
@@ -265,6 +283,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 			&i.IsBot,
 			&i.IsVerified,
 			&i.Is2faEnabled,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -278,6 +297,17 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Use
 	return items, nil
 }
 
+const softDeleteUser = `-- name: SoftDeleteUser :exec
+UPDATE users
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteUser(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteUser, id)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET 
@@ -288,8 +318,8 @@ SET
     background_color = COALESCE($5, background_color),
     background_pic = COALESCE($6, background_pic),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $7
-RETURNING id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, created_at, updated_at
+WHERE id = $7 AND is_deleted = FALSE
+RETURNING id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -329,6 +359,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.IsBot,
 		&i.IsVerified,
 		&i.Is2faEnabled,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -338,7 +369,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 const updateUserPassword = `-- name: UpdateUserPassword :exec
 UPDATE users
 SET password = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 type UpdateUserPasswordParams struct {
@@ -354,7 +385,7 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 const updateUserStatus = `-- name: UpdateUserStatus :exec
 UPDATE users
 SET status = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 type UpdateUserStatusParams struct {

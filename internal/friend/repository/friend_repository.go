@@ -100,7 +100,7 @@ func (r *FriendRepository) ToggleFavorite(ctx context.Context, userID, friendID 
 
 // DeleteFriendship deletes a bidirectional friendship
 func (r *FriendRepository) DeleteFriendship(ctx context.Context, userID, friendID int32) error {
-	return r.queries.DeleteFriendship(ctx, repo.DeleteFriendshipParams{
+	return r.queries.SoftDeleteFriendship(ctx, repo.SoftDeleteFriendshipParams{
 		UserID:   userID,
 		FriendID: friendID,
 	})

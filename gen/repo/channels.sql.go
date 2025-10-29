@@ -16,7 +16,7 @@ INSERT INTO channels (
     server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
-) RETURNING id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, created_at, updated_at
+) RETURNING id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, is_deleted, created_at, updated_at
 `
 
 type CreateChannelParams struct {
@@ -55,25 +55,16 @@ func (q *Queries) CreateChannel(ctx context.Context, arg CreateChannelParams) (C
 		&i.UserLimit,
 		&i.Bitrate,
 		&i.IsPrivate,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteChannel = `-- name: DeleteChannel :exec
-DELETE FROM channels
-WHERE id = $1
-`
-
-func (q *Queries) DeleteChannel(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteChannel, id)
-	return err
-}
-
 const getChannelByID = `-- name: GetChannelByID :one
-SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, created_at, updated_at FROM channels
-WHERE id = $1 LIMIT 1
+SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, is_deleted, created_at, updated_at FROM channels
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetChannelByID(ctx context.Context, id int32) (Channel, error) {
@@ -92,6 +83,7 @@ func (q *Queries) GetChannelByID(ctx context.Context, id int32) (Channel, error)
 		&i.UserLimit,
 		&i.Bitrate,
 		&i.IsPrivate,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -99,8 +91,8 @@ func (q *Queries) GetChannelByID(ctx context.Context, id int32) (Channel, error)
 }
 
 const getChannelsByCategory = `-- name: GetChannelsByCategory :many
-SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, created_at, updated_at FROM channels
-WHERE category_id = $1
+SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, is_deleted, created_at, updated_at FROM channels
+WHERE category_id = $1 AND is_deleted = FALSE
 ORDER BY position ASC
 `
 
@@ -126,6 +118,7 @@ func (q *Queries) GetChannelsByCategory(ctx context.Context, categoryID pgtype.I
 			&i.UserLimit,
 			&i.Bitrate,
 			&i.IsPrivate,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -140,8 +133,8 @@ func (q *Queries) GetChannelsByCategory(ctx context.Context, categoryID pgtype.I
 }
 
 const getChannelsByType = `-- name: GetChannelsByType :many
-SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, created_at, updated_at FROM channels
-WHERE server_id = $1 AND type = $2
+SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, is_deleted, created_at, updated_at FROM channels
+WHERE server_id = $1 AND type = $2 AND is_deleted = FALSE
 ORDER BY position ASC
 `
 
@@ -172,6 +165,7 @@ func (q *Queries) GetChannelsByType(ctx context.Context, arg GetChannelsByTypePa
 			&i.UserLimit,
 			&i.Bitrate,
 			&i.IsPrivate,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -186,8 +180,8 @@ func (q *Queries) GetChannelsByType(ctx context.Context, arg GetChannelsByTypePa
 }
 
 const getServerChannels = `-- name: GetServerChannels :many
-SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, created_at, updated_at FROM channels
-WHERE server_id = $1
+SELECT id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, is_deleted, created_at, updated_at FROM channels
+WHERE server_id = $1 AND is_deleted = FALSE
 ORDER BY position ASC
 `
 
@@ -213,6 +207,7 @@ func (q *Queries) GetServerChannels(ctx context.Context, serverID int32) ([]Chan
 			&i.UserLimit,
 			&i.Bitrate,
 			&i.IsPrivate,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -226,6 +221,38 @@ func (q *Queries) GetServerChannels(ctx context.Context, serverID int32) ([]Chan
 	return items, nil
 }
 
+const hardDeleteChannel = `-- name: HardDeleteChannel :exec
+DELETE FROM channels
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteChannel(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteChannel, id)
+	return err
+}
+
+const restoreChannel = `-- name: RestoreChannel :exec
+UPDATE channels
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreChannel(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreChannel, id)
+	return err
+}
+
+const softDeleteChannel = `-- name: SoftDeleteChannel :exec
+UPDATE channels
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteChannel(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteChannel, id)
+	return err
+}
+
 const updateChannel = `-- name: UpdateChannel :one
 UPDATE channels
 SET 
@@ -235,8 +262,8 @@ SET
     is_nsfw = COALESCE($4, is_nsfw),
     slowmode_delay = COALESCE($5, slowmode_delay),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $6
-RETURNING id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, created_at, updated_at
+WHERE id = $6 AND is_deleted = FALSE
+RETURNING id, server_id, category_id, name, type, position, topic, is_nsfw, slowmode_delay, user_limit, bitrate, is_private, is_deleted, created_at, updated_at
 `
 
 type UpdateChannelParams struct {
@@ -271,6 +298,7 @@ func (q *Queries) UpdateChannel(ctx context.Context, arg UpdateChannelParams) (C
 		&i.UserLimit,
 		&i.Bitrate,
 		&i.IsPrivate,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -280,7 +308,7 @@ func (q *Queries) UpdateChannel(ctx context.Context, arg UpdateChannelParams) (C
 const updateChannelPosition = `-- name: UpdateChannelPosition :exec
 UPDATE channels
 SET position = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 type UpdateChannelPositionParams struct {

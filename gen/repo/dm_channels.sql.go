@@ -16,7 +16,7 @@ INSERT INTO dm_channels (
     name, icon, owner_id, is_group
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, name, icon, owner_id, is_group, last_message_id, last_message_at, created_at
+) RETURNING id, name, icon, owner_id, is_group, last_message_id, last_message_at, is_deleted, created_at
 `
 
 type CreateDMChannelParams struct {
@@ -42,24 +42,15 @@ func (q *Queries) CreateDMChannel(ctx context.Context, arg CreateDMChannelParams
 		&i.IsGroup,
 		&i.LastMessageID,
 		&i.LastMessageAt,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteDMChannel = `-- name: DeleteDMChannel :exec
-DELETE FROM dm_channels
-WHERE id = $1
-`
-
-func (q *Queries) DeleteDMChannel(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteDMChannel, id)
-	return err
-}
-
 const getDMChannelByID = `-- name: GetDMChannelByID :one
-SELECT id, name, icon, owner_id, is_group, last_message_id, last_message_at, created_at FROM dm_channels
-WHERE id = $1 LIMIT 1
+SELECT id, name, icon, owner_id, is_group, last_message_id, last_message_at, is_deleted, created_at FROM dm_channels
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetDMChannelByID(ctx context.Context, id int32) (DmChannel, error) {
@@ -73,15 +64,16 @@ func (q *Queries) GetDMChannelByID(ctx context.Context, id int32) (DmChannel, er
 		&i.IsGroup,
 		&i.LastMessageID,
 		&i.LastMessageAt,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getUserDMChannels = `-- name: GetUserDMChannels :many
-SELECT dc.id, dc.name, dc.icon, dc.owner_id, dc.is_group, dc.last_message_id, dc.last_message_at, dc.created_at FROM dm_channels dc
+SELECT dc.id, dc.name, dc.icon, dc.owner_id, dc.is_group, dc.last_message_id, dc.last_message_at, dc.is_deleted, dc.created_at FROM dm_channels dc
 INNER JOIN dm_participants dp ON dc.id = dp.dm_channel_id
-WHERE dp.user_id = $1
+WHERE dp.user_id = $1 AND dc.is_deleted = FALSE
 ORDER BY dc.last_message_at DESC NULLS LAST
 `
 
@@ -102,6 +94,7 @@ func (q *Queries) GetUserDMChannels(ctx context.Context, userID int32) ([]DmChan
 			&i.IsGroup,
 			&i.LastMessageID,
 			&i.LastMessageAt,
+			&i.IsDeleted,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -114,15 +107,48 @@ func (q *Queries) GetUserDMChannels(ctx context.Context, userID int32) ([]DmChan
 	return items, nil
 }
 
+const hardDeleteDMChannel = `-- name: HardDeleteDMChannel :exec
+DELETE FROM dm_channels
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteDMChannel(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteDMChannel, id)
+	return err
+}
+
+const restoreDMChannel = `-- name: RestoreDMChannel :exec
+UPDATE dm_channels
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreDMChannel(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreDMChannel, id)
+	return err
+}
+
+const softDeleteDMChannel = `-- name: SoftDeleteDMChannel :exec
+UPDATE dm_channels
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteDMChannel(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteDMChannel, id)
+	return err
+}
+
 const updateDMChannel = `-- name: UpdateDMChannel :one
 UPDATE dm_channels
 SET 
     name = COALESCE($1, name),
     icon = COALESCE($2, icon),
     last_message_id = COALESCE($3, last_message_id),
-    last_message_at = COALESCE($4, last_message_at)
-WHERE id = $5
-RETURNING id, name, icon, owner_id, is_group, last_message_id, last_message_at, created_at
+    last_message_at = COALESCE($4, last_message_at),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $5 AND is_deleted = FALSE
+RETURNING id, name, icon, owner_id, is_group, last_message_id, last_message_at, is_deleted, created_at
 `
 
 type UpdateDMChannelParams struct {
@@ -150,6 +176,7 @@ func (q *Queries) UpdateDMChannel(ctx context.Context, arg UpdateDMChannelParams
 		&i.IsGroup,
 		&i.LastMessageID,
 		&i.LastMessageAt,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err

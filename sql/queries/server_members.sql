@@ -17,7 +17,7 @@ LIMIT $2 OFFSET $3;
 
 -- name: UpdateMemberNickname :exec
 UPDATE server_members
-SET nickname = $3
+SET nickname = $3, updated_at = CURRENT_TIMESTAMP
 WHERE server_id = $1 AND user_id = $2;
 
 -- name: RemoveServerMember :exec
@@ -35,5 +35,5 @@ WHERE server_id = $1;
 
 -- name: UpdateMemberMuteStatus :exec
 UPDATE server_members
-SET is_muted = $3, is_deafened = $4
+SET is_muted = $3, is_deafened = $4, updated_at = CURRENT_TIMESTAMP
 WHERE server_id = $1 AND user_id = $2;

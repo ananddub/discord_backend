@@ -1,4 +1,0 @@
-{
-  "username": "static matrix",
-  "password": "{{ faker.internet.password }}"
-}

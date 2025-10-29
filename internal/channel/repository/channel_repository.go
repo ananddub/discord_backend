@@ -68,7 +68,7 @@ func (r *ChannelRepository) UpdateChannel(ctx context.Context, params repo.Updat
 
 // DeleteChannel deletes a channel
 func (r *ChannelRepository) DeleteChannel(ctx context.Context, id int32) error {
-	return r.queries.DeleteChannel(ctx, id)
+	return r.queries.SoftDeleteChannel(ctx, id)
 }
 
 // UpdateChannelPosition updates channel position

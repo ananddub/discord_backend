@@ -14,6 +14,15 @@
     }
   ],
   "authConfigs": [],
-  "certificates": [],
+  "certificates": [
+    {
+      "id": "c87e8eeb-0452-4b92-abef-11f95d304829",
+      "name": "auth",
+      "type": "single-file",
+      "options": {
+        "path": ""
+      }
+    }
+  ],
   "proxies": []
 }

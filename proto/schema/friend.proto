@@ -18,4 +18,5 @@ message Friend {
   int64 updated_at = 11;
   optional string  alias_name = 12;
   protoschema.User user = 13;
+  bool is_deleted = 14;
 }

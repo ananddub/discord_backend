@@ -13,8 +13,13 @@ type PostgreSQLStruct struct {
 	MinConnections int    `koanf:"min_connections"`
 }
 
+type RedisStruct struct {
+	URL string `koanf:"url"`
+}
+
 type DatabaseStruct struct {
 	PostgreSQL PostgreSQLStruct `koanf:"postgresql"`
+	Redis      RedisStruct      `koanf:"redis"`
 }
 type ServiceStruct struct {
 	Environment string `koanf:"environment"`

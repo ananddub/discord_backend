@@ -16,7 +16,7 @@ INSERT INTO servers (
     name, icon, banner, description, owner_id, region
 ) VALUES (
     $1, $2, $3, $4, $5, $6
-) RETURNING id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, created_at, updated_at
+) RETURNING id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, is_deleted, created_at, updated_at
 `
 
 type CreateServerParams struct {
@@ -49,6 +49,7 @@ func (q *Queries) CreateServer(ctx context.Context, arg CreateServerParams) (Ser
 		&i.MemberCount,
 		&i.IsVerified,
 		&i.VanityUrl,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -58,7 +59,7 @@ func (q *Queries) CreateServer(ctx context.Context, arg CreateServerParams) (Ser
 const decrementMemberCount = `-- name: DecrementMemberCount :exec
 UPDATE servers
 SET member_count = member_count - 1, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 func (q *Queries) DecrementMemberCount(ctx context.Context, id int32) error {
@@ -66,19 +67,9 @@ func (q *Queries) DecrementMemberCount(ctx context.Context, id int32) error {
 	return err
 }
 
-const deleteServer = `-- name: DeleteServer :exec
-DELETE FROM servers
-WHERE id = $1
-`
-
-func (q *Queries) DeleteServer(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteServer, id)
-	return err
-}
-
 const getServerByID = `-- name: GetServerByID :one
-SELECT id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, created_at, updated_at FROM servers
-WHERE id = $1 LIMIT 1
+SELECT id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, is_deleted, created_at, updated_at FROM servers
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetServerByID(ctx context.Context, id int32) (Server, error) {
@@ -95,6 +86,7 @@ func (q *Queries) GetServerByID(ctx context.Context, id int32) (Server, error) {
 		&i.MemberCount,
 		&i.IsVerified,
 		&i.VanityUrl,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -102,8 +94,8 @@ func (q *Queries) GetServerByID(ctx context.Context, id int32) (Server, error) {
 }
 
 const getServersByOwner = `-- name: GetServersByOwner :many
-SELECT id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, created_at, updated_at FROM servers
-WHERE owner_id = $1
+SELECT id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, is_deleted, created_at, updated_at FROM servers
+WHERE owner_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -127,6 +119,7 @@ func (q *Queries) GetServersByOwner(ctx context.Context, ownerID int32) ([]Serve
 			&i.MemberCount,
 			&i.IsVerified,
 			&i.VanityUrl,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -141,9 +134,9 @@ func (q *Queries) GetServersByOwner(ctx context.Context, ownerID int32) ([]Serve
 }
 
 const getUserServers = `-- name: GetUserServers :many
-SELECT s.id, s.name, s.icon, s.banner, s.description, s.owner_id, s.region, s.member_count, s.is_verified, s.vanity_url, s.created_at, s.updated_at FROM servers s
+SELECT s.id, s.name, s.icon, s.banner, s.description, s.owner_id, s.region, s.member_count, s.is_verified, s.vanity_url, s.is_deleted, s.created_at, s.updated_at FROM servers s
 INNER JOIN server_members sm ON s.id = sm.server_id
-WHERE sm.user_id = $1
+WHERE sm.user_id = $1 AND s.is_deleted = FALSE
 ORDER BY sm.joined_at DESC
 `
 
@@ -167,6 +160,7 @@ func (q *Queries) GetUserServers(ctx context.Context, userID int32) ([]Server, e
 			&i.MemberCount,
 			&i.IsVerified,
 			&i.VanityUrl,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -180,14 +174,46 @@ func (q *Queries) GetUserServers(ctx context.Context, userID int32) ([]Server, e
 	return items, nil
 }
 
+const hardDeleteServer = `-- name: HardDeleteServer :exec
+DELETE FROM servers
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteServer(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteServer, id)
+	return err
+}
+
 const incrementMemberCount = `-- name: IncrementMemberCount :exec
 UPDATE servers
 SET member_count = member_count + 1, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 func (q *Queries) IncrementMemberCount(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, incrementMemberCount, id)
+	return err
+}
+
+const restoreServer = `-- name: RestoreServer :exec
+UPDATE servers
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreServer(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreServer, id)
+	return err
+}
+
+const softDeleteServer = `-- name: SoftDeleteServer :exec
+UPDATE servers
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteServer(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteServer, id)
 	return err
 }
 
@@ -200,8 +226,8 @@ SET
     description = COALESCE($4, description),
     region = COALESCE($5, region),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $6
-RETURNING id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, created_at, updated_at
+WHERE id = $6 AND is_deleted = FALSE
+RETURNING id, name, icon, banner, description, owner_id, region, member_count, is_verified, vanity_url, is_deleted, created_at, updated_at
 `
 
 type UpdateServerParams struct {
@@ -234,6 +260,7 @@ func (q *Queries) UpdateServer(ctx context.Context, arg UpdateServerParams) (Ser
 		&i.MemberCount,
 		&i.IsVerified,
 		&i.VanityUrl,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -243,7 +270,7 @@ func (q *Queries) UpdateServer(ctx context.Context, arg UpdateServerParams) (Ser
 const updateServerOwner = `-- name: UpdateServerOwner :exec
 UPDATE servers
 SET owner_id = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 type UpdateServerOwnerParams struct {

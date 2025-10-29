@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS channel_permissions (
     allow_permissions BIGINT DEFAULT 0,
     deny_permissions BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CHECK ((role_id IS NOT NULL AND user_id IS NULL) OR (role_id IS NULL AND user_id IS NOT NULL)),
     UNIQUE(channel_id, role_id, user_id)
 );

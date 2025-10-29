@@ -16,7 +16,7 @@ INSERT INTO roles (
     server_id, name, color, hoist, position, permissions, mentionable, description
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
-) RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, created_at, updated_at
+) RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
 type CreateRoleParams struct {
@@ -54,25 +54,16 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		&i.Icon,
 		&i.Description,
 		&i.IsDefault,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteRole = `-- name: DeleteRole :exec
-DELETE FROM roles
-WHERE id = $1
-`
-
-func (q *Queries) DeleteRole(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteRole, id)
-	return err
-}
-
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, created_at, updated_at FROM roles
-WHERE id = $1 LIMIT 1
+SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at FROM roles
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
@@ -90,6 +81,7 @@ func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
 		&i.Icon,
 		&i.Description,
 		&i.IsDefault,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -97,8 +89,8 @@ func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
 }
 
 const getServerRoles = `-- name: GetServerRoles :many
-SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, created_at, updated_at FROM roles
-WHERE server_id = $1
+SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at FROM roles
+WHERE server_id = $1 AND is_deleted = FALSE
 ORDER BY position DESC
 `
 
@@ -123,6 +115,7 @@ func (q *Queries) GetServerRoles(ctx context.Context, serverID int32) ([]Role, e
 			&i.Icon,
 			&i.Description,
 			&i.IsDefault,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -136,6 +129,38 @@ func (q *Queries) GetServerRoles(ctx context.Context, serverID int32) ([]Role, e
 	return items, nil
 }
 
+const hardDeleteRole = `-- name: HardDeleteRole :exec
+DELETE FROM roles
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteRole(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteRole, id)
+	return err
+}
+
+const restoreRole = `-- name: RestoreRole :exec
+UPDATE roles
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreRole(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreRole, id)
+	return err
+}
+
+const softDeleteRole = `-- name: SoftDeleteRole :exec
+UPDATE roles
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteRole(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteRole, id)
+	return err
+}
+
 const updateRole = `-- name: UpdateRole :one
 UPDATE roles
 SET 
@@ -147,8 +172,8 @@ SET
     mentionable = COALESCE($6, mentionable),
     description = COALESCE($7, description),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $8
-RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, created_at, updated_at
+WHERE id = $8 AND is_deleted = FALSE
+RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
 type UpdateRoleParams struct {
@@ -186,6 +211,7 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		&i.Icon,
 		&i.Description,
 		&i.IsDefault,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -195,7 +221,7 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 const updateRolePosition = `-- name: UpdateRolePosition :exec
 UPDATE roles
 SET position = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 type UpdateRolePositionParams struct {

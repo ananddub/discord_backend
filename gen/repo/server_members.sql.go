@@ -16,7 +16,7 @@ INSERT INTO server_members (
     server_id, user_id, nickname
 ) VALUES (
     $1, $2, $3
-) RETURNING id, server_id, user_id, nickname, joined_at, is_muted, is_deafened
+) RETURNING id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
 `
 
 type AddServerMemberParams struct {
@@ -36,6 +36,7 @@ func (q *Queries) AddServerMember(ctx context.Context, arg AddServerMemberParams
 		&i.JoinedAt,
 		&i.IsMuted,
 		&i.IsDeafened,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -53,7 +54,7 @@ func (q *Queries) CountServerMembers(ctx context.Context, serverID int32) (int64
 }
 
 const getServerMember = `-- name: GetServerMember :one
-SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened FROM server_members
+SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at FROM server_members
 WHERE server_id = $1 AND user_id = $2 LIMIT 1
 `
 
@@ -73,12 +74,13 @@ func (q *Queries) GetServerMember(ctx context.Context, arg GetServerMemberParams
 		&i.JoinedAt,
 		&i.IsMuted,
 		&i.IsDeafened,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getServerMembers = `-- name: GetServerMembers :many
-SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened FROM server_members
+SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at FROM server_members
 WHERE server_id = $1
 ORDER BY joined_at DESC
 LIMIT $2 OFFSET $3
@@ -107,6 +109,7 @@ func (q *Queries) GetServerMembers(ctx context.Context, arg GetServerMembersPara
 			&i.JoinedAt,
 			&i.IsMuted,
 			&i.IsDeafened,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -119,7 +122,7 @@ func (q *Queries) GetServerMembers(ctx context.Context, arg GetServerMembersPara
 }
 
 const getUserServerMemberships = `-- name: GetUserServerMemberships :many
-SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened FROM server_members
+SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at FROM server_members
 WHERE user_id = $1
 ORDER BY joined_at DESC
 `
@@ -141,6 +144,7 @@ func (q *Queries) GetUserServerMemberships(ctx context.Context, userID int32) ([
 			&i.JoinedAt,
 			&i.IsMuted,
 			&i.IsDeafened,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -169,7 +173,7 @@ func (q *Queries) RemoveServerMember(ctx context.Context, arg RemoveServerMember
 
 const updateMemberMuteStatus = `-- name: UpdateMemberMuteStatus :exec
 UPDATE server_members
-SET is_muted = $3, is_deafened = $4
+SET is_muted = $3, is_deafened = $4, updated_at = CURRENT_TIMESTAMP
 WHERE server_id = $1 AND user_id = $2
 `
 
@@ -192,7 +196,7 @@ func (q *Queries) UpdateMemberMuteStatus(ctx context.Context, arg UpdateMemberMu
 
 const updateMemberNickname = `-- name: UpdateMemberNickname :exec
 UPDATE server_members
-SET nickname = $3
+SET nickname = $3, updated_at = CURRENT_TIMESTAMP
 WHERE server_id = $1 AND user_id = $2
 `
 

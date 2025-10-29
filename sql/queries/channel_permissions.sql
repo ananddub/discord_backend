@@ -7,7 +7,8 @@ INSERT INTO channel_permissions (
 ON CONFLICT (channel_id, role_id, user_id)
 DO UPDATE SET
     allow_permissions = EXCLUDED.allow_permissions,
-    deny_permissions = EXCLUDED.deny_permissions
+    deny_permissions = EXCLUDED.deny_permissions,
+    updated_at = CURRENT_TIMESTAMP
 RETURNING *;
 
 -- name: GetChannelPermissions :many

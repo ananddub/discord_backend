@@ -28,6 +28,7 @@ message DMChannel {
   int32 last_message_id = 6;
   int64 last_message_at = 7;
   int64 created_at = 8;
+  bool is_deleted = 9;
 }
 
 message DMParticipant {

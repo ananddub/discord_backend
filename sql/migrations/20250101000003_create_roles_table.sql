@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS roles (
     icon VARCHAR(255),
     description TEXT,
     is_default BOOLEAN DEFAULT FALSE,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(server_id, name)

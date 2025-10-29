@@ -1,6 +1,12 @@
 {
   "details": {
-    "methodFqn": "protoservice.server.ServerService.CreateServer"
+    "methodFqn": "protoservice.server.ServerService.CreateServer",
+    "metadata": [
+      {
+        "key": "authorization",
+        "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJleHAiOjE3NjE4NTY5OTUsIm5iZiI6MTc2MTc3MDU5NSwiaWF0IjoxNzYxNzcwNTk1fQ.T9jWP1fisCm4Jw05ukzl6wmgcYDDDxFxt3SjHO7chZ8"
+      }
+    ]
   },
   "requests": [
     {

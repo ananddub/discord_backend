@@ -310,7 +310,7 @@ func (c *DMController) DeleteDM(ctx context.Context, req *dm.DeleteDMRequest) (*
 	_ = message
 
 	// Delete message from database
-	err = c.queries.DeleteMessage(ctx, req.GetMessageId())
+	err = c.queries.SoftDeleteMessage(ctx, req.GetMessageId())
 	if err != nil {
 		return nil, commonErrors.ToGRPCError(err)
 	}

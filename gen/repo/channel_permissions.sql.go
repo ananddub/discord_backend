@@ -52,7 +52,7 @@ func (q *Queries) DeleteUserChannelPermissions(ctx context.Context, arg DeleteUs
 }
 
 const getChannelPermissions = `-- name: GetChannelPermissions :many
-SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at FROM channel_permissions
+SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions
 WHERE channel_id = $1
 `
 
@@ -73,6 +73,7 @@ func (q *Queries) GetChannelPermissions(ctx context.Context, channelID int32) ([
 			&i.AllowPermissions,
 			&i.DenyPermissions,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -85,7 +86,7 @@ func (q *Queries) GetChannelPermissions(ctx context.Context, channelID int32) ([
 }
 
 const getRoleChannelPermissions = `-- name: GetRoleChannelPermissions :one
-SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at FROM channel_permissions
+SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions
 WHERE channel_id = $1 AND role_id = $2 LIMIT 1
 `
 
@@ -105,12 +106,13 @@ func (q *Queries) GetRoleChannelPermissions(ctx context.Context, arg GetRoleChan
 		&i.AllowPermissions,
 		&i.DenyPermissions,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getUserChannelPermissions = `-- name: GetUserChannelPermissions :one
-SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at FROM channel_permissions
+SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions
 WHERE channel_id = $1 AND user_id = $2 LIMIT 1
 `
 
@@ -130,6 +132,7 @@ func (q *Queries) GetUserChannelPermissions(ctx context.Context, arg GetUserChan
 		&i.AllowPermissions,
 		&i.DenyPermissions,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -143,8 +146,9 @@ INSERT INTO channel_permissions (
 ON CONFLICT (channel_id, role_id, user_id)
 DO UPDATE SET
     allow_permissions = EXCLUDED.allow_permissions,
-    deny_permissions = EXCLUDED.deny_permissions
-RETURNING id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at
+    deny_permissions = EXCLUDED.deny_permissions,
+    updated_at = CURRENT_TIMESTAMP
+RETURNING id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
 `
 
 type SetChannelPermissionParams struct {
@@ -172,6 +176,7 @@ func (q *Queries) SetChannelPermission(ctx context.Context, arg SetChannelPermis
 		&i.AllowPermissions,
 		&i.DenyPermissions,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

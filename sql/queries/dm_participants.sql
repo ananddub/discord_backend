@@ -15,7 +15,7 @@ WHERE dm_channel_id = $1 AND user_id = $2;
 
 -- name: UpdateLastReadMessage :exec
 UPDATE dm_participants
-SET last_read_message_id = $3
+SET last_read_message_id = $3, updated_at = CURRENT_TIMESTAMP
 WHERE dm_channel_id = $1 AND user_id = $2;
 
 -- name: GetDMChannelForUsers :one

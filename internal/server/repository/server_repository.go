@@ -85,7 +85,7 @@ func (r *ServerRepository) UpdateServer(ctx context.Context, serverID int32, nam
 
 // DeleteServer deletes a server
 func (r *ServerRepository) DeleteServer(ctx context.Context, serverID int32) error {
-	return r.queries.DeleteServer(ctx, serverID)
+	return r.queries.SoftDeleteServer(ctx, serverID)
 }
 
 // GetUserServers retrieves all servers a user is a member of
@@ -207,7 +207,7 @@ func (r *ServerRepository) GetServerRoles(ctx context.Context, serverID int32) (
 
 // DeleteRole deletes a role
 func (r *ServerRepository) DeleteRole(ctx context.Context, roleID int32) error {
-	return r.queries.DeleteRole(ctx, roleID)
+	return r.queries.SoftDeleteRole(ctx, roleID)
 }
 
 // CreateInvite creates a server invite
@@ -246,7 +246,7 @@ func (r *ServerRepository) IncrementInviteUses(ctx context.Context, code string)
 
 // DeleteInvite deletes an invite
 func (r *ServerRepository) DeleteInvite(ctx context.Context, code string) error {
-	return r.queries.DeleteInvite(ctx, code)
+	return r.queries.SoftDeleteInvite(ctx, code)
 }
 
 // CreateBan creates a ban
@@ -283,7 +283,7 @@ func (r *ServerRepository) GetServerBans(ctx context.Context, serverID int32) ([
 
 // DeleteBan removes a ban
 func (r *ServerRepository) DeleteBan(ctx context.Context, serverID, userID int32) error {
-	return r.queries.DeleteBan(ctx, repo.DeleteBanParams{
+	return r.queries.SoftDeleteBan(ctx, repo.SoftDeleteBanParams{
 		ServerID: serverID,
 		UserID:   userID,
 	})

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS server_members (
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     is_muted BOOLEAN DEFAULT FALSE,
     is_deafened BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(server_id, user_id)
 );
 

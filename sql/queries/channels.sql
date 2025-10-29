@@ -7,16 +7,16 @@ INSERT INTO channels (
 
 -- name: GetChannelByID :one
 SELECT * FROM channels
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1;
 
 -- name: GetServerChannels :many
 SELECT * FROM channels
-WHERE server_id = $1
+WHERE server_id = $1 AND is_deleted = FALSE
 ORDER BY position ASC;
 
 -- name: GetChannelsByCategory :many
 SELECT * FROM channels
-WHERE category_id = $1
+WHERE category_id = $1 AND is_deleted = FALSE
 ORDER BY position ASC;
 
 -- name: UpdateChannel :one
@@ -28,19 +28,29 @@ SET
     is_nsfw = COALESCE(sqlc.narg('is_nsfw'), is_nsfw),
     slowmode_delay = COALESCE(sqlc.narg('slowmode_delay'), slowmode_delay),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = sqlc.arg('id')
+WHERE id = sqlc.arg('id') AND is_deleted = FALSE
 RETURNING *;
 
--- name: DeleteChannel :exec
+-- name: SoftDeleteChannel :exec
+UPDATE channels
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: HardDeleteChannel :exec
 DELETE FROM channels
+WHERE id = $1;
+
+-- name: RestoreChannel :exec
+UPDATE channels
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1;
 
 -- name: UpdateChannelPosition :exec
 UPDATE channels
 SET position = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
+WHERE id = $1 AND is_deleted = FALSE;
 
 -- name: GetChannelsByType :many
 SELECT * FROM channels
-WHERE server_id = $1 AND type = $2
+WHERE server_id = $1 AND type = $2 AND is_deleted = FALSE
 ORDER BY position ASC;

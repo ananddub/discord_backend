@@ -96,6 +96,7 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (str
 		CustomStatus:    user.CustomStatus.String,
 		IsBot:           user.IsBot.Bool,
 		IsVerified:      user.IsVerified.Bool,
+		IsDeleted:       user.IsDeleted.Bool,
 		CreatedAt:       user.CreatedAt.Time.Unix(),
 		UpdatedAt:       user.UpdatedAt.Time.Unix(),
 	}

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS dm_participants (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     last_read_message_id INTEGER,
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(dm_channel_id, user_id)
 );
 

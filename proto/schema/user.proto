@@ -28,6 +28,7 @@ message User {
   string custom_status = 15;
   bool is_bot = 16;
   bool is_verified = 17;
+  bool is_deleted = 18;
 }
 
 message UserPresence {

@@ -95,7 +95,7 @@ func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserR
 		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
 	}
 
-	var fullName, profilePic, bio *string
+	var fullName, profilePic, backgroundColor, colorCode, backgroundPic, bio *string
 	if req.User.GetFullName() != "" {
 		fn := req.User.GetFullName()
 		fullName = &fn
@@ -108,8 +108,25 @@ func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserR
 		b := req.User.GetBio()
 		bio = &b
 	}
-
-	user, err := c.userService.UpdateUser(ctx, userID, fullName, profilePic, bio, nil, nil, nil)
+	if req.User.GetColorCode() == "" {
+		cc := req.User.GetColorCode()
+		colorCode = &cc
+	}
+	if req.User.GetBackgroundColor() == "" {
+		bc := req.User.GetBackgroundColor()
+		backgroundColor = &bc
+	}
+	if req.User.GetBackgroundPic() == "" {
+		bp := req.User.GetBackgroundPic()
+		backgroundPic = &bp
+	}
+	user, err := c.userService.UpdateUser(ctx, userID, fullName,
+		profilePic,
+		bio,
+		colorCode,
+		backgroundColor,
+		backgroundPic,
+	)
 	if err != nil {
 		return nil, commonErrors.ToGRPCError(err)
 	}

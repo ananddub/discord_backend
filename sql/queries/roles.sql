@@ -7,11 +7,11 @@ INSERT INTO roles (
 
 -- name: GetRoleByID :one
 SELECT * FROM roles
-WHERE id = $1 LIMIT 1;
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1;
 
 -- name: GetServerRoles :many
 SELECT * FROM roles
-WHERE server_id = $1
+WHERE server_id = $1 AND is_deleted = FALSE
 ORDER BY position DESC;
 
 -- name: UpdateRole :one
@@ -25,14 +25,24 @@ SET
     mentionable = COALESCE(sqlc.narg('mentionable'), mentionable),
     description = COALESCE(sqlc.narg('description'), description),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = sqlc.arg('id')
+WHERE id = sqlc.arg('id') AND is_deleted = FALSE
 RETURNING *;
 
--- name: DeleteRole :exec
+-- name: SoftDeleteRole :exec
+UPDATE roles
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: HardDeleteRole :exec
 DELETE FROM roles
+WHERE id = $1;
+
+-- name: RestoreRole :exec
+UPDATE roles
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1;
 
 -- name: UpdateRolePosition :exec
 UPDATE roles
 SET position = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1;
+WHERE id = $1 AND is_deleted = FALSE;

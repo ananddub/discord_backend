@@ -142,16 +142,26 @@ type SyncBansParams struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
+type SyncBansRow struct {
+	ID          int32            `json:"id"`
+	ServerID    int32            `json:"server_id"`
+	UserID      int32            `json:"user_id"`
+	ModeratorID int32            `json:"moderator_id"`
+	Reason      pgtype.Text      `json:"reason"`
+	ExpiresAt   pgtype.Timestamp `json:"expires_at"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+}
+
 // Get server bans updated after last_updated_at
-func (q *Queries) SyncBans(ctx context.Context, arg SyncBansParams) ([]Ban, error) {
+func (q *Queries) SyncBans(ctx context.Context, arg SyncBansParams) ([]SyncBansRow, error) {
 	rows, err := q.db.Query(ctx, syncBans, arg.UserID, arg.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Ban
+	var items []SyncBansRow
 	for rows.Next() {
-		var i Ban
+		var i SyncBansRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ServerID,
@@ -199,16 +209,33 @@ type SyncChannelsParams struct {
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
+type SyncChannelsRow struct {
+	ID            int32            `json:"id"`
+	ServerID      int32            `json:"server_id"`
+	CategoryID    pgtype.Int4      `json:"category_id"`
+	Name          string           `json:"name"`
+	Type          string           `json:"type"`
+	Position      pgtype.Int4      `json:"position"`
+	Topic         pgtype.Text      `json:"topic"`
+	IsNsfw        pgtype.Bool      `json:"is_nsfw"`
+	SlowmodeDelay pgtype.Int4      `json:"slowmode_delay"`
+	UserLimit     pgtype.Int4      `json:"user_limit"`
+	Bitrate       pgtype.Int4      `json:"bitrate"`
+	IsPrivate     pgtype.Bool      `json:"is_private"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+}
+
 // Get channels from user's servers, updated after last_updated_at
-func (q *Queries) SyncChannels(ctx context.Context, arg SyncChannelsParams) ([]Channel, error) {
+func (q *Queries) SyncChannels(ctx context.Context, arg SyncChannelsParams) ([]SyncChannelsRow, error) {
 	rows, err := q.db.Query(ctx, syncChannels, arg.UserID, arg.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Channel
+	var items []SyncChannelsRow
 	for rows.Next() {
-		var i Channel
+		var i SyncChannelsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ServerID,
@@ -286,8 +313,19 @@ type SyncDirectMessagesParams struct {
 	Offset        int32            `json:"offset"`
 }
 
+type SyncDirectMessagesRow struct {
+	ID            int32            `json:"id"`
+	Name          pgtype.Text      `json:"name"`
+	Icon          pgtype.Text      `json:"icon"`
+	OwnerID       pgtype.Int4      `json:"owner_id"`
+	IsGroup       pgtype.Bool      `json:"is_group"`
+	LastMessageID pgtype.Int4      `json:"last_message_id"`
+	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+}
+
 // Get DM channels user is part of
-func (q *Queries) SyncDirectMessages(ctx context.Context, arg SyncDirectMessagesParams) ([]DmChannel, error) {
+func (q *Queries) SyncDirectMessages(ctx context.Context, arg SyncDirectMessagesParams) ([]SyncDirectMessagesRow, error) {
 	rows, err := q.db.Query(ctx, syncDirectMessages,
 		arg.UserID,
 		arg.LastMessageAt,
@@ -298,9 +336,9 @@ func (q *Queries) SyncDirectMessages(ctx context.Context, arg SyncDirectMessages
 		return nil, err
 	}
 	defer rows.Close()
-	var items []DmChannel
+	var items []SyncDirectMessagesRow
 	for rows.Next() {
-		var i DmChannel
+		var i SyncDirectMessagesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -462,16 +500,30 @@ type SyncInvitesParams struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
+type SyncInvitesRow struct {
+	ID        int32            `json:"id"`
+	Code      string           `json:"code"`
+	ServerID  int32            `json:"server_id"`
+	ChannelID pgtype.Int4      `json:"channel_id"`
+	InviterID int32            `json:"inviter_id"`
+	MaxUses   pgtype.Int4      `json:"max_uses"`
+	Uses      pgtype.Int4      `json:"uses"`
+	MaxAge    pgtype.Int4      `json:"max_age"`
+	Temporary pgtype.Bool      `json:"temporary"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
 // Get server invites updated after last_updated_at
-func (q *Queries) SyncInvites(ctx context.Context, arg SyncInvitesParams) ([]Invite, error) {
+func (q *Queries) SyncInvites(ctx context.Context, arg SyncInvitesParams) ([]SyncInvitesRow, error) {
 	rows, err := q.db.Query(ctx, syncInvites, arg.UserID, arg.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Invite
+	var items []SyncInvitesRow
 	for rows.Next() {
-		var i Invite
+		var i SyncInvitesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Code,
@@ -790,16 +842,26 @@ type SyncPermissionsParams struct {
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
+type SyncPermissionsRow struct {
+	ID               int32            `json:"id"`
+	ChannelID        int32            `json:"channel_id"`
+	RoleID           pgtype.Int4      `json:"role_id"`
+	UserID           pgtype.Int4      `json:"user_id"`
+	AllowPermissions pgtype.Int8      `json:"allow_permissions"`
+	DenyPermissions  pgtype.Int8      `json:"deny_permissions"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+}
+
 // Get channel permissions updated after last_updated_at
-func (q *Queries) SyncPermissions(ctx context.Context, arg SyncPermissionsParams) ([]ChannelPermission, error) {
+func (q *Queries) SyncPermissions(ctx context.Context, arg SyncPermissionsParams) ([]SyncPermissionsRow, error) {
 	rows, err := q.db.Query(ctx, syncPermissions, arg.UserID, arg.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ChannelPermission
+	var items []SyncPermissionsRow
 	for rows.Next() {
-		var i ChannelPermission
+		var i SyncPermissionsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
@@ -908,16 +970,31 @@ type SyncServersParams struct {
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
+type SyncServersRow struct {
+	ID          int32            `json:"id"`
+	Name        string           `json:"name"`
+	Icon        pgtype.Text      `json:"icon"`
+	Banner      pgtype.Text      `json:"banner"`
+	Description pgtype.Text      `json:"description"`
+	OwnerID     int32            `json:"owner_id"`
+	Region      pgtype.Text      `json:"region"`
+	MemberCount pgtype.Int4      `json:"member_count"`
+	IsVerified  pgtype.Bool      `json:"is_verified"`
+	VanityUrl   pgtype.Text      `json:"vanity_url"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+}
+
 // Get servers user is member of, updated after last_updated_at
-func (q *Queries) SyncServers(ctx context.Context, arg SyncServersParams) ([]Server, error) {
+func (q *Queries) SyncServers(ctx context.Context, arg SyncServersParams) ([]SyncServersRow, error) {
 	rows, err := q.db.Query(ctx, syncServers, arg.UserID, arg.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Server
+	var items []SyncServersRow
 	for rows.Next() {
-		var i Server
+		var i SyncServersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -1048,8 +1125,23 @@ type SyncUserMessagesParams struct {
 	Offset    int32            `json:"offset"`
 }
 
+type SyncUserMessagesRow struct {
+	ID               int32            `json:"id"`
+	ChannelID        int32            `json:"channel_id"`
+	SenderID         int32            `json:"sender_id"`
+	Content          string           `json:"content"`
+	MessageType      pgtype.Text      `json:"message_type"`
+	ReplyToMessageID pgtype.Int4      `json:"reply_to_message_id"`
+	IsEdited         pgtype.Bool      `json:"is_edited"`
+	IsPinned         pgtype.Bool      `json:"is_pinned"`
+	MentionEveryone  pgtype.Bool      `json:"mention_everyone"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	EditedAt         pgtype.Timestamp `json:"edited_at"`
+}
+
 // Get all messages for channels user has access to
-func (q *Queries) SyncUserMessages(ctx context.Context, arg SyncUserMessagesParams) ([]Message, error) {
+func (q *Queries) SyncUserMessages(ctx context.Context, arg SyncUserMessagesParams) ([]SyncUserMessagesRow, error) {
 	rows, err := q.db.Query(ctx, syncUserMessages,
 		arg.UserID,
 		arg.UpdatedAt,
@@ -1060,9 +1152,9 @@ func (q *Queries) SyncUserMessages(ctx context.Context, arg SyncUserMessagesPara
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []SyncUserMessagesRow
 	for rows.Next() {
-		var i Message
+		var i SyncUserMessagesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
@@ -1262,16 +1354,32 @@ type SyncVoiceStatesParams struct {
 	JoinedAt pgtype.Timestamp `json:"joined_at"`
 }
 
+type SyncVoiceStatesRow struct {
+	ID         int32            `json:"id"`
+	UserID     int32            `json:"user_id"`
+	ChannelID  int32            `json:"channel_id"`
+	ServerID   pgtype.Int4      `json:"server_id"`
+	SessionID  string           `json:"session_id"`
+	IsMuted    pgtype.Bool      `json:"is_muted"`
+	IsDeafened pgtype.Bool      `json:"is_deafened"`
+	SelfMute   pgtype.Bool      `json:"self_mute"`
+	SelfDeaf   pgtype.Bool      `json:"self_deaf"`
+	SelfVideo  pgtype.Bool      `json:"self_video"`
+	SelfStream pgtype.Bool      `json:"self_stream"`
+	Suppress   pgtype.Bool      `json:"suppress"`
+	JoinedAt   pgtype.Timestamp `json:"joined_at"`
+}
+
 // Get active voice states for user's servers
-func (q *Queries) SyncVoiceStates(ctx context.Context, arg SyncVoiceStatesParams) ([]VoiceState, error) {
+func (q *Queries) SyncVoiceStates(ctx context.Context, arg SyncVoiceStatesParams) ([]SyncVoiceStatesRow, error) {
 	rows, err := q.db.Query(ctx, syncVoiceStates, arg.UserID, arg.JoinedAt)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []VoiceState
+	var items []SyncVoiceStatesRow
 	for rows.Next() {
-		var i VoiceState
+		var i SyncVoiceStatesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,

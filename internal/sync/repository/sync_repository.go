@@ -78,7 +78,7 @@ func (r *SyncRepository) SyncMessages(ctx context.Context, channelID int32, last
 }
 
 // SyncUserMessages returns all messages for user's channels
-func (r *SyncRepository) SyncUserMessages(ctx context.Context, userID int32, lastUpdatedAt int64, limit, offset int32) ([]repo.Message, error) {
+func (r *SyncRepository) SyncUserMessages(ctx context.Context, userID int32, lastUpdatedAt int64, limit, offset int32) ([]repo.SyncUserMessagesRow, error) {
 	return r.queries.SyncUserMessages(ctx, repo.SyncUserMessagesParams{
 		UserID:    userID,
 		UpdatedAt: toPgTimestamp(lastUpdatedAt),
@@ -96,7 +96,7 @@ func (r *SyncRepository) CountUpdatedMessages(ctx context.Context, userID int32,
 }
 
 // SyncServers returns servers updated after timestamp
-func (r *SyncRepository) SyncServers(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.Server, error) {
+func (r *SyncRepository) SyncServers(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.SyncServersRow, error) {
 	return r.queries.SyncServers(ctx, repo.SyncServersParams{
 		UserID:    userID,
 		UpdatedAt: toPgTimestamp(lastUpdatedAt),
@@ -112,7 +112,7 @@ func (r *SyncRepository) CountUpdatedServers(ctx context.Context, userID int32, 
 }
 
 // SyncChannels returns channels updated after timestamp
-func (r *SyncRepository) SyncChannels(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.Channel, error) {
+func (r *SyncRepository) SyncChannels(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.SyncChannelsRow, error) {
 	return r.queries.SyncChannels(ctx, repo.SyncChannelsParams{
 		UserID:    userID,
 		UpdatedAt: toPgTimestamp(lastUpdatedAt),
@@ -157,7 +157,7 @@ func (r *SyncRepository) SyncTextChannels(ctx context.Context, userID int32, las
 }
 
 // SyncDirectMessages returns DM channels updated after timestamp
-func (r *SyncRepository) SyncDirectMessages(ctx context.Context, userID int32, lastUpdatedAt int64, limit, offset int32) ([]repo.DmChannel, error) {
+func (r *SyncRepository) SyncDirectMessages(ctx context.Context, userID int32, lastUpdatedAt int64, limit, offset int32) ([]repo.SyncDirectMessagesRow, error) {
 	return r.queries.SyncDirectMessages(ctx, repo.SyncDirectMessagesParams{
 		UserID:        userID,
 		LastMessageAt: toPgTimestamp(lastUpdatedAt),
@@ -167,7 +167,7 @@ func (r *SyncRepository) SyncDirectMessages(ctx context.Context, userID int32, l
 }
 
 // SyncPermissions returns permissions updated after timestamp
-func (r *SyncRepository) SyncPermissions(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.ChannelPermission, error) {
+func (r *SyncRepository) SyncPermissions(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.SyncPermissionsRow, error) {
 	return r.queries.SyncPermissions(ctx, repo.SyncPermissionsParams{
 		UserID:    userID,
 		CreatedAt: toPgTimestamp(lastUpdatedAt),
@@ -175,7 +175,7 @@ func (r *SyncRepository) SyncPermissions(ctx context.Context, userID int32, last
 }
 
 // SyncVoiceStates returns voice states updated after timestamp
-func (r *SyncRepository) SyncVoiceStates(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.VoiceState, error) {
+func (r *SyncRepository) SyncVoiceStates(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.SyncVoiceStatesRow, error) {
 	return r.queries.SyncVoiceStates(ctx, repo.SyncVoiceStatesParams{
 		UserID:   userID,
 		JoinedAt: toPgTimestamp(lastUpdatedAt),
@@ -201,7 +201,7 @@ func (r *SyncRepository) SyncServerMembers(ctx context.Context, serverID int32, 
 }
 
 // SyncBans returns bans updated after timestamp
-func (r *SyncRepository) SyncBans(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.Ban, error) {
+func (r *SyncRepository) SyncBans(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.SyncBansRow, error) {
 	return r.queries.SyncBans(ctx, repo.SyncBansParams{
 		UserID:    userID,
 		CreatedAt: toPgTimestamp(lastUpdatedAt),
@@ -209,7 +209,7 @@ func (r *SyncRepository) SyncBans(ctx context.Context, userID int32, lastUpdated
 }
 
 // SyncInvites returns invites updated after timestamp
-func (r *SyncRepository) SyncInvites(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.Invite, error) {
+func (r *SyncRepository) SyncInvites(ctx context.Context, userID int32, lastUpdatedAt int64) ([]repo.SyncInvitesRow, error) {
 	return r.queries.SyncInvites(ctx, repo.SyncInvitesParams{
 		UserID:    userID,
 		CreatedAt: toPgTimestamp(lastUpdatedAt),

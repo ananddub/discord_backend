@@ -25,7 +25,8 @@ SET
     self_mute = COALESCE(sqlc.narg('self_mute'), self_mute),
     self_deaf = COALESCE(sqlc.narg('self_deaf'), self_deaf),
     self_video = COALESCE(sqlc.narg('self_video'), self_video),
-    self_stream = COALESCE(sqlc.narg('self_stream'), self_stream)
+    self_stream = COALESCE(sqlc.narg('self_stream'), self_stream),
+    updated_at = CURRENT_TIMESTAMP
 WHERE user_id = sqlc.arg('user_id') AND channel_id = sqlc.arg('channel_id')
 RETURNING *;
 

@@ -7,12 +7,27 @@ INSERT INTO message_attachments (
 
 -- name: GetMessageAttachments :many
 SELECT * FROM message_attachments
-WHERE message_id = $1;
+WHERE message_id = $1 AND is_deleted = FALSE;
 
--- name: DeleteMessageAttachment :exec
+-- name: SoftDeleteMessageAttachment :exec
+UPDATE message_attachments
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: HardDeleteMessageAttachment :exec
 DELETE FROM message_attachments
 WHERE id = $1;
 
--- name: DeleteMessageAttachments :exec
+-- name: RestoreMessageAttachment :exec
+UPDATE message_attachments
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: SoftDeleteMessageAttachments :exec
+UPDATE message_attachments
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE message_id = $1;
+
+-- name: HardDeleteMessageAttachments :exec
 DELETE FROM message_attachments
 WHERE message_id = $1;

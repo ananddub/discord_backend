@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS message_attachments (
     file_size BIGINT NOT NULL,
     width INTEGER,
     height INTEGER,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 

@@ -7,26 +7,46 @@ INSERT INTO invites (
 
 -- name: GetInviteByCode :one
 SELECT * FROM invites
-WHERE code = $1 LIMIT 1;
+WHERE code = $1 AND is_deleted = FALSE LIMIT 1;
 
 -- name: GetServerInvites :many
 SELECT * FROM invites
-WHERE server_id = $1
+WHERE server_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC;
 
 -- name: IncrementInviteUses :exec
 UPDATE invites
-SET uses = uses + 1
+SET uses = uses + 1, updated_at = CURRENT_TIMESTAMP
+WHERE code = $1 AND is_deleted = FALSE;
+
+-- name: SoftDeleteInvite :exec
+UPDATE invites
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
 WHERE code = $1;
 
--- name: DeleteInvite :exec
+-- name: HardDeleteInvite :exec
 DELETE FROM invites
 WHERE code = $1;
 
--- name: DeleteExpiredInvites :exec
+-- name: RestoreInvite :exec
+UPDATE invites
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE code = $1;
+
+-- name: SoftDeleteExpiredInvites :exec
+UPDATE invites
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP AND is_deleted = FALSE;
+
+-- name: HardDeleteExpiredInvites :exec
 DELETE FROM invites
 WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP;
 
--- name: DeleteInvitesByServer :exec
+-- name: SoftDeleteInvitesByServer :exec
+UPDATE invites
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE server_id = $1 AND is_deleted = FALSE;
+
+-- name: HardDeleteInvitesByServer :exec
 DELETE FROM invites
 WHERE server_id = $1;

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS bans (
     moderator_id INTEGER NOT NULL REFERENCES users(id) ON DELETE SET NULL,
     reason TEXT,
     expires_at TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(server_id, user_id)
 );

@@ -16,7 +16,7 @@ INSERT INTO dm_participants (
     dm_channel_id, user_id
 ) VALUES (
     $1, $2
-) RETURNING id, dm_channel_id, user_id, last_read_message_id, joined_at
+) RETURNING id, dm_channel_id, user_id, last_read_message_id, joined_at, updated_at
 `
 
 type AddDMParticipantParams struct {
@@ -33,12 +33,13 @@ func (q *Queries) AddDMParticipant(ctx context.Context, arg AddDMParticipantPara
 		&i.UserID,
 		&i.LastReadMessageID,
 		&i.JoinedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getDMChannelForUsers = `-- name: GetDMChannelForUsers :one
-SELECT dc.id, dc.name, dc.icon, dc.owner_id, dc.is_group, dc.last_message_id, dc.last_message_at, dc.created_at FROM dm_channels dc
+SELECT dc.id, dc.name, dc.icon, dc.owner_id, dc.is_group, dc.last_message_id, dc.last_message_at, dc.is_deleted, dc.created_at FROM dm_channels dc
 INNER JOIN dm_participants dp1 ON dc.id = dp1.dm_channel_id
 INNER JOIN dm_participants dp2 ON dc.id = dp2.dm_channel_id
 WHERE dp1.user_id = $1 AND dp2.user_id = $2 AND dc.is_group = FALSE
@@ -61,13 +62,14 @@ func (q *Queries) GetDMChannelForUsers(ctx context.Context, arg GetDMChannelForU
 		&i.IsGroup,
 		&i.LastMessageID,
 		&i.LastMessageAt,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getDMParticipants = `-- name: GetDMParticipants :many
-SELECT id, dm_channel_id, user_id, last_read_message_id, joined_at FROM dm_participants
+SELECT id, dm_channel_id, user_id, last_read_message_id, joined_at, updated_at FROM dm_participants
 WHERE dm_channel_id = $1
 `
 
@@ -86,6 +88,7 @@ func (q *Queries) GetDMParticipants(ctx context.Context, dmChannelID int32) ([]D
 			&i.UserID,
 			&i.LastReadMessageID,
 			&i.JoinedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -114,7 +117,7 @@ func (q *Queries) RemoveDMParticipant(ctx context.Context, arg RemoveDMParticipa
 
 const updateLastReadMessage = `-- name: UpdateLastReadMessage :exec
 UPDATE dm_participants
-SET last_read_message_id = $3
+SET last_read_message_id = $3, updated_at = CURRENT_TIMESTAMP
 WHERE dm_channel_id = $1 AND user_id = $2
 `
 

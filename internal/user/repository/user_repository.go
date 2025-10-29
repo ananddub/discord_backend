@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"discord/gen/repo"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -62,7 +63,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, userID int32, fullName,
 }
 
 func (r *UserRepository) DeleteUser(ctx context.Context, userID int32) error {
-	return r.q.DeleteUser(ctx, userID)
+	return r.q.SoftDeleteUser(ctx, userID)
 }
 
 func (r *UserRepository) SearchUsers(ctx context.Context, query string, limit, offset int32) ([]repo.User, error) {

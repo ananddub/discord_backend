@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS emojis (
     managed BOOLEAN DEFAULT FALSE,
     animated BOOLEAN DEFAULT FALSE,
     available BOOLEAN DEFAULT TRUE,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     UNIQUE(server_id, name)
 );

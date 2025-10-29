@@ -11,13 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const bulkDeleteMessages = `-- name: BulkDeleteMessages :exec
+const bulkHardDeleteMessages = `-- name: BulkHardDeleteMessages :exec
 DELETE FROM messages
 WHERE id = ANY($1::int[])
 `
 
-func (q *Queries) BulkDeleteMessages(ctx context.Context, dollar_1 []int32) error {
-	_, err := q.db.Exec(ctx, bulkDeleteMessages, dollar_1)
+func (q *Queries) BulkHardDeleteMessages(ctx context.Context, dollar_1 []int32) error {
+	_, err := q.db.Exec(ctx, bulkHardDeleteMessages, dollar_1)
+	return err
+}
+
+const bulkSoftDeleteMessages = `-- name: BulkSoftDeleteMessages :exec
+UPDATE messages
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = ANY($1::int[])
+`
+
+func (q *Queries) BulkSoftDeleteMessages(ctx context.Context, dollar_1 []int32) error {
+	_, err := q.db.Exec(ctx, bulkSoftDeleteMessages, dollar_1)
 	return err
 }
 
@@ -26,7 +37,7 @@ INSERT INTO messages (
     channel_id, sender_id, content, message_type, reply_to_message_id, mention_everyone
 ) VALUES (
     $1, $2, $3, $4, $5, $6
-) RETURNING id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at
+) RETURNING id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
 type CreateMessageParams struct {
@@ -58,6 +69,7 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.IsEdited,
 		&i.IsPinned,
 		&i.MentionEveryone,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EditedAt,
@@ -65,19 +77,9 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 	return i, err
 }
 
-const deleteMessage = `-- name: DeleteMessage :exec
-DELETE FROM messages
-WHERE id = $1
-`
-
-func (q *Queries) DeleteMessage(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteMessage, id)
-	return err
-}
-
 const getChannelMessages = `-- name: GetChannelMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
+WHERE channel_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -107,6 +109,7 @@ func (q *Queries) GetChannelMessages(ctx context.Context, arg GetChannelMessages
 			&i.IsEdited,
 			&i.IsPinned,
 			&i.MentionEveryone,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EditedAt,
@@ -122,8 +125,8 @@ func (q *Queries) GetChannelMessages(ctx context.Context, arg GetChannelMessages
 }
 
 const getMessageByID = `-- name: GetMessageByID :one
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
-WHERE id = $1 LIMIT 1
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
+WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetMessageByID(ctx context.Context, id int32) (Message, error) {
@@ -139,6 +142,7 @@ func (q *Queries) GetMessageByID(ctx context.Context, id int32) (Message, error)
 		&i.IsEdited,
 		&i.IsPinned,
 		&i.MentionEveryone,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EditedAt,
@@ -147,8 +151,8 @@ func (q *Queries) GetMessageByID(ctx context.Context, id int32) (Message, error)
 }
 
 const getMessagesAfter = `-- name: GetMessagesAfter :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND id > $2
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
+WHERE channel_id = $1 AND id > $2 AND is_deleted = FALSE
 ORDER BY created_at ASC
 LIMIT $3
 `
@@ -178,6 +182,7 @@ func (q *Queries) GetMessagesAfter(ctx context.Context, arg GetMessagesAfterPara
 			&i.IsEdited,
 			&i.IsPinned,
 			&i.MentionEveryone,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EditedAt,
@@ -193,8 +198,8 @@ func (q *Queries) GetMessagesAfter(ctx context.Context, arg GetMessagesAfterPara
 }
 
 const getMessagesBefore = `-- name: GetMessagesBefore :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND id < $2
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
+WHERE channel_id = $1 AND id < $2 AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $3
 `
@@ -224,6 +229,7 @@ func (q *Queries) GetMessagesBefore(ctx context.Context, arg GetMessagesBeforePa
 			&i.IsEdited,
 			&i.IsPinned,
 			&i.MentionEveryone,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EditedAt,
@@ -239,8 +245,8 @@ func (q *Queries) GetMessagesBefore(ctx context.Context, arg GetMessagesBeforePa
 }
 
 const getPinnedMessages = `-- name: GetPinnedMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND is_pinned = TRUE
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
+WHERE channel_id = $1 AND is_pinned = TRUE AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -263,6 +269,7 @@ func (q *Queries) GetPinnedMessages(ctx context.Context, channelID int32) ([]Mes
 			&i.IsEdited,
 			&i.IsPinned,
 			&i.MentionEveryone,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EditedAt,
@@ -278,8 +285,8 @@ func (q *Queries) GetPinnedMessages(ctx context.Context, channelID int32) ([]Mes
 }
 
 const getUserMessages = `-- name: GetUserMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
-WHERE sender_id = $1
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
+WHERE sender_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -309,6 +316,7 @@ func (q *Queries) GetUserMessages(ctx context.Context, arg GetUserMessagesParams
 			&i.IsEdited,
 			&i.IsPinned,
 			&i.MentionEveryone,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EditedAt,
@@ -323,10 +331,20 @@ func (q *Queries) GetUserMessages(ctx context.Context, arg GetUserMessagesParams
 	return items, nil
 }
 
+const hardDeleteMessage = `-- name: HardDeleteMessage :exec
+DELETE FROM messages
+WHERE id = $1
+`
+
+func (q *Queries) HardDeleteMessage(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, hardDeleteMessage, id)
+	return err
+}
+
 const pinMessage = `-- name: PinMessage :exec
 UPDATE messages
 SET is_pinned = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 func (q *Queries) PinMessage(ctx context.Context, id int32) error {
@@ -334,10 +352,22 @@ func (q *Queries) PinMessage(ctx context.Context, id int32) error {
 	return err
 }
 
+const restoreMessage = `-- name: RestoreMessage :exec
+UPDATE messages
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) RestoreMessage(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, restoreMessage, id)
+	return err
+}
+
 const searchMessages = `-- name: SearchMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at FROM messages
+SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
 WHERE channel_id = $1 
   AND content ILIKE '%' || $2 || '%'
+  AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $4
 `
@@ -373,6 +403,7 @@ func (q *Queries) SearchMessages(ctx context.Context, arg SearchMessagesParams) 
 			&i.IsEdited,
 			&i.IsPinned,
 			&i.MentionEveryone,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.EditedAt,
@@ -387,10 +418,21 @@ func (q *Queries) SearchMessages(ctx context.Context, arg SearchMessagesParams) 
 	return items, nil
 }
 
+const softDeleteMessage = `-- name: SoftDeleteMessage :exec
+UPDATE messages
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteMessage(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, softDeleteMessage, id)
+	return err
+}
+
 const unpinMessage = `-- name: UnpinMessage :exec
 UPDATE messages
 SET is_pinned = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+WHERE id = $1 AND is_deleted = FALSE
 `
 
 func (q *Queries) UnpinMessage(ctx context.Context, id int32) error {
@@ -405,8 +447,8 @@ SET
     is_edited = TRUE,
     edited_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, created_at, updated_at, edited_at
+WHERE id = $1 AND is_deleted = FALSE
+RETURNING id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
 type UpdateMessageParams struct {
@@ -427,6 +469,7 @@ func (q *Queries) UpdateMessage(ctx context.Context, arg UpdateMessageParams) (M
 		&i.IsEdited,
 		&i.IsPinned,
 		&i.MentionEveryone,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.EditedAt,

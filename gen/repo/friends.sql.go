@@ -14,7 +14,7 @@ import (
 const blockUser = `-- name: BlockUser :exec
 UPDATE friends
 SET status = 'blocked', updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2
+WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
 `
 
 type BlockUserParams struct {
@@ -32,7 +32,7 @@ INSERT INTO friends (
     user_id, friend_id, status
 ) VALUES (
     $1, $2, $3
-) RETURNING id, user_id, friend_id, status, alias_name, is_favorite, created_at, updated_at
+) RETURNING id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at
 `
 
 type CreateFriendParams struct {
@@ -51,29 +51,15 @@ func (q *Queries) CreateFriend(ctx context.Context, arg CreateFriendParams) (Fri
 		&i.Status,
 		&i.AliasName,
 		&i.IsFavorite,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const deleteFriendship = `-- name: DeleteFriendship :exec
-DELETE FROM friends
-WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
-`
-
-type DeleteFriendshipParams struct {
-	UserID   int32 `json:"user_id"`
-	FriendID int32 `json:"friend_id"`
-}
-
-func (q *Queries) DeleteFriendship(ctx context.Context, arg DeleteFriendshipParams) error {
-	_, err := q.db.Exec(ctx, deleteFriendship, arg.UserID, arg.FriendID)
-	return err
-}
-
 const getBlockedUsers = `-- name: GetBlockedUsers :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, created_at, updated_at FROM friends
+SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
 WHERE user_id = $1 AND status = 'blocked'
 `
 
@@ -93,6 +79,7 @@ func (q *Queries) GetBlockedUsers(ctx context.Context, userID int32) ([]Friend, 
 			&i.Status,
 			&i.AliasName,
 			&i.IsFavorite,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -107,8 +94,8 @@ func (q *Queries) GetBlockedUsers(ctx context.Context, userID int32) ([]Friend, 
 }
 
 const getFriendship = `-- name: GetFriendship :one
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, created_at, updated_at FROM friends
-WHERE user_id = $1 AND friend_id = $2 LIMIT 1
+SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
+WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE LIMIT 1
 `
 
 type GetFriendshipParams struct {
@@ -126,6 +113,7 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 		&i.Status,
 		&i.AliasName,
 		&i.IsFavorite,
+		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -133,8 +121,8 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 }
 
 const getPendingFriendRequests = `-- name: GetPendingFriendRequests :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, created_at, updated_at FROM friends
-WHERE friend_id = $1 AND status = 'pending'
+SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
+WHERE friend_id = $1 AND status = 'pending' AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -154,6 +142,7 @@ func (q *Queries) GetPendingFriendRequests(ctx context.Context, friendID int32) 
 			&i.Status,
 			&i.AliasName,
 			&i.IsFavorite,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -168,8 +157,8 @@ func (q *Queries) GetPendingFriendRequests(ctx context.Context, friendID int32) 
 }
 
 const getSentFriendRequests = `-- name: GetSentFriendRequests :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, created_at, updated_at FROM friends
-WHERE user_id = $1 AND status = 'pending'
+SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
+WHERE user_id = $1 AND status = 'pending' AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -189,6 +178,7 @@ func (q *Queries) GetSentFriendRequests(ctx context.Context, userID int32) ([]Fr
 			&i.Status,
 			&i.AliasName,
 			&i.IsFavorite,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -203,8 +193,8 @@ func (q *Queries) GetSentFriendRequests(ctx context.Context, userID int32) ([]Fr
 }
 
 const getUserFriends = `-- name: GetUserFriends :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, created_at, updated_at FROM friends
-WHERE user_id = $1 AND status = 'accepted'
+SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
+WHERE user_id = $1 AND status = 'accepted' AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -224,6 +214,7 @@ func (q *Queries) GetUserFriends(ctx context.Context, userID int32) ([]Friend, e
 			&i.Status,
 			&i.AliasName,
 			&i.IsFavorite,
+			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -237,10 +228,57 @@ func (q *Queries) GetUserFriends(ctx context.Context, userID int32) ([]Friend, e
 	return items, nil
 }
 
+const hardDeleteFriendship = `-- name: HardDeleteFriendship :exec
+DELETE FROM friends
+WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+`
+
+type HardDeleteFriendshipParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) HardDeleteFriendship(ctx context.Context, arg HardDeleteFriendshipParams) error {
+	_, err := q.db.Exec(ctx, hardDeleteFriendship, arg.UserID, arg.FriendID)
+	return err
+}
+
+const restoreFriendship = `-- name: RestoreFriendship :exec
+UPDATE friends
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE user_id = $1 AND friend_id = $2
+`
+
+type RestoreFriendshipParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) RestoreFriendship(ctx context.Context, arg RestoreFriendshipParams) error {
+	_, err := q.db.Exec(ctx, restoreFriendship, arg.UserID, arg.FriendID)
+	return err
+}
+
+const softDeleteFriendship = `-- name: SoftDeleteFriendship :exec
+UPDATE friends
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+`
+
+type SoftDeleteFriendshipParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) SoftDeleteFriendship(ctx context.Context, arg SoftDeleteFriendshipParams) error {
+	_, err := q.db.Exec(ctx, softDeleteFriendship, arg.UserID, arg.FriendID)
+	return err
+}
+
 const toggleFavorite = `-- name: ToggleFavorite :exec
 UPDATE friends
 SET is_favorite = $3, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2
+WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
 `
 
 type ToggleFavoriteParams struct {
@@ -257,7 +295,7 @@ func (q *Queries) ToggleFavorite(ctx context.Context, arg ToggleFavoriteParams) 
 const updateFriendAlias = `-- name: UpdateFriendAlias :exec
 UPDATE friends
 SET alias_name = $3, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2
+WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
 `
 
 type UpdateFriendAliasParams struct {
@@ -274,7 +312,7 @@ func (q *Queries) UpdateFriendAlias(ctx context.Context, arg UpdateFriendAliasPa
 const updateFriendStatus = `-- name: UpdateFriendStatus :exec
 UPDATE friends
 SET status = $3, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2
+WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
 `
 
 type UpdateFriendStatusParams struct {

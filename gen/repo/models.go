@@ -27,6 +27,7 @@ type Ban struct {
 	ModeratorID int32            `json:"moderator_id"`
 	Reason      pgtype.Text      `json:"reason"`
 	ExpiresAt   pgtype.Timestamp `json:"expires_at"`
+	IsDeleted   pgtype.Bool      `json:"is_deleted"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 }
 
@@ -43,6 +44,7 @@ type Channel struct {
 	UserLimit     pgtype.Int4      `json:"user_limit"`
 	Bitrate       pgtype.Int4      `json:"bitrate"`
 	IsPrivate     pgtype.Bool      `json:"is_private"`
+	IsDeleted     pgtype.Bool      `json:"is_deleted"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 }
@@ -55,6 +57,7 @@ type ChannelPermission struct {
 	AllowPermissions pgtype.Int8      `json:"allow_permissions"`
 	DenyPermissions  pgtype.Int8      `json:"deny_permissions"`
 	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
 }
 
 type DmChannel struct {
@@ -65,6 +68,7 @@ type DmChannel struct {
 	IsGroup       pgtype.Bool      `json:"is_group"`
 	LastMessageID pgtype.Int4      `json:"last_message_id"`
 	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
+	IsDeleted     pgtype.Bool      `json:"is_deleted"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 }
 
@@ -74,6 +78,7 @@ type DmParticipant struct {
 	UserID            int32            `json:"user_id"`
 	LastReadMessageID pgtype.Int4      `json:"last_read_message_id"`
 	JoinedAt          pgtype.Timestamp `json:"joined_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 }
 
 type Emoji struct {
@@ -86,6 +91,7 @@ type Emoji struct {
 	Managed       pgtype.Bool      `json:"managed"`
 	Animated      pgtype.Bool      `json:"animated"`
 	Available     pgtype.Bool      `json:"available"`
+	IsDeleted     pgtype.Bool      `json:"is_deleted"`
 	CreatedAt     pgtype.Timestamp `json:"created_at"`
 }
 
@@ -96,6 +102,7 @@ type Friend struct {
 	Status     string           `json:"status"`
 	AliasName  pgtype.Text      `json:"alias_name"`
 	IsFavorite pgtype.Bool      `json:"is_favorite"`
+	IsDeleted  pgtype.Bool      `json:"is_deleted"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
 	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
 }
@@ -110,6 +117,7 @@ type Invite struct {
 	Uses      pgtype.Int4      `json:"uses"`
 	MaxAge    pgtype.Int4      `json:"max_age"`
 	Temporary pgtype.Bool      `json:"temporary"`
+	IsDeleted pgtype.Bool      `json:"is_deleted"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	ExpiresAt pgtype.Timestamp `json:"expires_at"`
 }
@@ -119,6 +127,7 @@ type MemberRole struct {
 	MemberID   int32            `json:"member_id"`
 	RoleID     int32            `json:"role_id"`
 	AssignedAt pgtype.Timestamp `json:"assigned_at"`
+	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
 }
 
 type Message struct {
@@ -131,6 +140,7 @@ type Message struct {
 	IsEdited         pgtype.Bool      `json:"is_edited"`
 	IsPinned         pgtype.Bool      `json:"is_pinned"`
 	MentionEveryone  pgtype.Bool      `json:"mention_everyone"`
+	IsDeleted        pgtype.Bool      `json:"is_deleted"`
 	CreatedAt        pgtype.Timestamp `json:"created_at"`
 	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
 	EditedAt         pgtype.Timestamp `json:"edited_at"`
@@ -145,6 +155,7 @@ type MessageAttachment struct {
 	FileSize  int64            `json:"file_size"`
 	Width     pgtype.Int4      `json:"width"`
 	Height    pgtype.Int4      `json:"height"`
+	IsDeleted pgtype.Bool      `json:"is_deleted"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
@@ -177,6 +188,7 @@ type Role struct {
 	Icon        pgtype.Text      `json:"icon"`
 	Description pgtype.Text      `json:"description"`
 	IsDefault   pgtype.Bool      `json:"is_default"`
+	IsDeleted   pgtype.Bool      `json:"is_deleted"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
@@ -192,6 +204,7 @@ type Server struct {
 	MemberCount pgtype.Int4      `json:"member_count"`
 	IsVerified  pgtype.Bool      `json:"is_verified"`
 	VanityUrl   pgtype.Text      `json:"vanity_url"`
+	IsDeleted   pgtype.Bool      `json:"is_deleted"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
@@ -204,6 +217,7 @@ type ServerMember struct {
 	JoinedAt   pgtype.Timestamp `json:"joined_at"`
 	IsMuted    pgtype.Bool      `json:"is_muted"`
 	IsDeafened pgtype.Bool      `json:"is_deafened"`
+	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
 }
 
 type User struct {
@@ -222,6 +236,7 @@ type User struct {
 	IsBot           pgtype.Bool      `json:"is_bot"`
 	IsVerified      pgtype.Bool      `json:"is_verified"`
 	Is2faEnabled    pgtype.Bool      `json:"is_2fa_enabled"`
+	IsDeleted       pgtype.Bool      `json:"is_deleted"`
 	CreatedAt       pgtype.Timestamp `json:"created_at"`
 	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 }
@@ -252,4 +267,5 @@ type VoiceState struct {
 	SelfStream pgtype.Bool      `json:"self_stream"`
 	Suppress   pgtype.Bool      `json:"suppress"`
 	JoinedAt   pgtype.Timestamp `json:"joined_at"`
+	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
 }

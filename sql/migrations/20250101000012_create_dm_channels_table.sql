@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS dm_channels (
     is_group BOOLEAN DEFAULT FALSE,
     last_message_id INTEGER,
     last_message_at TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 

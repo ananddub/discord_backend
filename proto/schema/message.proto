@@ -33,6 +33,7 @@ message Message {
   int64 created_at = 15;
   int64 updated_at = 16;
   int64 edited_at = 17;
+  bool is_deleted = 18;
 }
 
 message MessageAttachment {
@@ -45,6 +46,7 @@ message MessageAttachment {
   int32 width = 7;  // for images/videos
   int32 height = 8; // for images/videos
   int64 created_at = 9;
+  bool is_deleted = 10;
 }
 
 message MessageReaction {

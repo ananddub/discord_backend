@@ -59,6 +59,7 @@ message Role {
   string icon = 10;
   int64 created_at = 11;
   int64 updated_at = 12;
+  bool is_deleted = 13;
 }
 
 message RolePermission {

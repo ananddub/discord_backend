@@ -16,7 +16,7 @@ INSERT INTO bans (
     server_id, user_id, moderator_id, reason, expires_at
 ) VALUES (
     $1, $2, $3, $4, $5
-) RETURNING id, server_id, user_id, moderator_id, reason, expires_at, created_at
+) RETURNING id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
 type CreateBanParams struct {
@@ -43,39 +43,15 @@ func (q *Queries) CreateBan(ctx context.Context, arg CreateBanParams) (Ban, erro
 		&i.ModeratorID,
 		&i.Reason,
 		&i.ExpiresAt,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const deleteBan = `-- name: DeleteBan :exec
-DELETE FROM bans
-WHERE server_id = $1 AND user_id = $2
-`
-
-type DeleteBanParams struct {
-	ServerID int32 `json:"server_id"`
-	UserID   int32 `json:"user_id"`
-}
-
-func (q *Queries) DeleteBan(ctx context.Context, arg DeleteBanParams) error {
-	_, err := q.db.Exec(ctx, deleteBan, arg.ServerID, arg.UserID)
-	return err
-}
-
-const deleteExpiredBans = `-- name: DeleteExpiredBans :exec
-DELETE FROM bans
-WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
-`
-
-func (q *Queries) DeleteExpiredBans(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, deleteExpiredBans)
-	return err
-}
-
 const getBan = `-- name: GetBan :one
-SELECT id, server_id, user_id, moderator_id, reason, expires_at, created_at FROM bans
-WHERE server_id = $1 AND user_id = $2 LIMIT 1
+SELECT id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at FROM bans
+WHERE server_id = $1 AND user_id = $2 AND is_deleted = FALSE LIMIT 1
 `
 
 type GetBanParams struct {
@@ -93,14 +69,15 @@ func (q *Queries) GetBan(ctx context.Context, arg GetBanParams) (Ban, error) {
 		&i.ModeratorID,
 		&i.Reason,
 		&i.ExpiresAt,
+		&i.IsDeleted,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getServerBans = `-- name: GetServerBans :many
-SELECT id, server_id, user_id, moderator_id, reason, expires_at, created_at FROM bans
-WHERE server_id = $1
+SELECT id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at FROM bans
+WHERE server_id = $1 AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -120,6 +97,7 @@ func (q *Queries) GetServerBans(ctx context.Context, serverID int32) ([]Ban, err
 			&i.ModeratorID,
 			&i.Reason,
 			&i.ExpiresAt,
+			&i.IsDeleted,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -132,10 +110,35 @@ func (q *Queries) GetServerBans(ctx context.Context, serverID int32) ([]Ban, err
 	return items, nil
 }
 
+const hardDeleteBan = `-- name: HardDeleteBan :exec
+DELETE FROM bans
+WHERE server_id = $1 AND user_id = $2
+`
+
+type HardDeleteBanParams struct {
+	ServerID int32 `json:"server_id"`
+	UserID   int32 `json:"user_id"`
+}
+
+func (q *Queries) HardDeleteBan(ctx context.Context, arg HardDeleteBanParams) error {
+	_, err := q.db.Exec(ctx, hardDeleteBan, arg.ServerID, arg.UserID)
+	return err
+}
+
+const hardDeleteExpiredBans = `-- name: HardDeleteExpiredBans :exec
+DELETE FROM bans
+WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
+`
+
+func (q *Queries) HardDeleteExpiredBans(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, hardDeleteExpiredBans)
+	return err
+}
+
 const isUserBanned = `-- name: IsUserBanned :one
 SELECT EXISTS(
     SELECT 1 FROM bans
-    WHERE server_id = $1 AND user_id = $2
+    WHERE server_id = $1 AND user_id = $2 AND is_deleted = FALSE
     AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
 ) AS is_banned
 `
@@ -150,4 +153,47 @@ func (q *Queries) IsUserBanned(ctx context.Context, arg IsUserBannedParams) (boo
 	var is_banned bool
 	err := row.Scan(&is_banned)
 	return is_banned, err
+}
+
+const restoreBan = `-- name: RestoreBan :exec
+UPDATE bans
+SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
+WHERE server_id = $1 AND user_id = $2
+`
+
+type RestoreBanParams struct {
+	ServerID int32 `json:"server_id"`
+	UserID   int32 `json:"user_id"`
+}
+
+func (q *Queries) RestoreBan(ctx context.Context, arg RestoreBanParams) error {
+	_, err := q.db.Exec(ctx, restoreBan, arg.ServerID, arg.UserID)
+	return err
+}
+
+const softDeleteBan = `-- name: SoftDeleteBan :exec
+UPDATE bans
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE server_id = $1 AND user_id = $2
+`
+
+type SoftDeleteBanParams struct {
+	ServerID int32 `json:"server_id"`
+	UserID   int32 `json:"user_id"`
+}
+
+func (q *Queries) SoftDeleteBan(ctx context.Context, arg SoftDeleteBanParams) error {
+	_, err := q.db.Exec(ctx, softDeleteBan, arg.ServerID, arg.UserID)
+	return err
+}
+
+const softDeleteExpiredBans = `-- name: SoftDeleteExpiredBans :exec
+UPDATE bans
+SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
+WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP AND is_deleted = FALSE
+`
+
+func (q *Queries) SoftDeleteExpiredBans(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, softDeleteExpiredBans)
+	return err
 }

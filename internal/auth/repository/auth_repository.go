@@ -84,5 +84,5 @@ func (r *AuthRepository) Enable2FA(ctx context.Context, userID int32, enabled bo
 
 // DeleteUser deletes a user account
 func (r *AuthRepository) DeleteUser(ctx context.Context, userID int32) error {
-	return r.queries.DeleteUser(ctx, userID)
+	return r.queries.SoftDeleteUser(ctx, userID)
 }

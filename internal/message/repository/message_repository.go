@@ -80,7 +80,7 @@ func (r *MessageRepository) UpdateMessage(ctx context.Context, messageID int32, 
 
 // DeleteMessage deletes a message
 func (r *MessageRepository) DeleteMessage(ctx context.Context, messageID int32) error {
-	return r.queries.DeleteMessage(ctx, messageID)
+	return r.queries.SoftDeleteMessage(ctx, messageID)
 }
 
 // PinMessage pins a message
@@ -100,7 +100,7 @@ func (r *MessageRepository) GetPinnedMessages(ctx context.Context, channelID int
 
 // BulkDeleteMessages deletes multiple messages
 func (r *MessageRepository) BulkDeleteMessages(ctx context.Context, messageIDs []int32) error {
-	return r.queries.BulkDeleteMessages(ctx, messageIDs)
+	return r.queries.BulkSoftDeleteMessages(ctx, messageIDs)
 }
 
 // SearchMessages searches for messages in a channel
@@ -192,10 +192,10 @@ func (r *MessageRepository) GetMessageAttachments(ctx context.Context, messageID
 
 // DeleteAttachment deletes a specific attachment
 func (r *MessageRepository) DeleteAttachment(ctx context.Context, attachmentID int32) error {
-	return r.queries.DeleteMessageAttachment(ctx, attachmentID)
+	return r.queries.SoftDeleteMessageAttachment(ctx, attachmentID)
 }
 
 // DeleteMessageAttachments deletes all attachments for a message
 func (r *MessageRepository) DeleteMessageAttachments(ctx context.Context, messageID int32) error {
-	return r.queries.DeleteMessageAttachments(ctx, messageID)
+	return r.queries.SoftDeleteMessageAttachments(ctx, messageID)
 }

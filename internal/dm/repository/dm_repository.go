@@ -103,7 +103,7 @@ func (r *DMRepository) UpdateDMChannel(ctx context.Context, id int32, name, icon
 
 // DeleteDMChannel deletes a DM channel
 func (r *DMRepository) DeleteDMChannel(ctx context.Context, id int32) error {
-	return r.queries.DeleteDMChannel(ctx, id)
+	return r.queries.SoftDeleteDMChannel(ctx, id)
 }
 
 // AddDMParticipant adds a participant to DM channel
