@@ -2,46 +2,87 @@ package repository
 
 import (
 	"context"
-	"discord/config"
+
 	"discord/gen/repo"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuthRepository struct {
-	readdb  *repo.Queries
-	writedb *repo.Queries
+	queries *repo.Queries
+	db      *pgxpool.Pool
 }
 
-func NewAuthRepository() (*AuthRepository, error) {
-	queries, err := config.RepoQuieries()
-	if err != nil {
-		return nil, err
-	}
+func NewAuthRepository(db *pgxpool.Pool) *AuthRepository {
 	return &AuthRepository{
-		readdb:  repo.New(queries.ReadDb),
-		writedb: repo.New(queries.WriteDb),
-	}, nil
+		queries: repo.New(db),
+		db:      db,
+	}
 }
 
-func (r *AuthRepository) CreateUser(ctx context.Context, value repo.CreateUserParams) (*repo.User, error) {
-	user, err := r.writedb.CreateUser(ctx, value)
+// CreateUser creates a new user in database
+func (r *AuthRepository) CreateUser(ctx context.Context, username, email, password string) error {
+	_, err := r.queries.CreateUser(ctx, repo.CreateUserParams{
+		Username: username,
+		Email:    email,
+		Password: password,
+	})
+	return err
+}
+
+// GetUserByID retrieves user by ID
+func (r *AuthRepository) GetUserByID(ctx context.Context, id int32) (*repo.User, error) {
+	user, err := r.queries.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *AuthRepository) FindUserByEmail(ctx context.Context, username string) (*repo.User, error) {
-	user, err := r.readdb.GetUserByEmail(ctx, username)
+// GetUserByEmail retrieves user by email
+func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*repo.User, error) {
+	user, err := r.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *AuthRepository) FindUserByUsername(ctx context.Context, username string) (*repo.User, error) {
-	user, err := r.readdb.GetUserByUsername(ctx, username)
+// GetUserByUsername retrieves user by username
+func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string) (*repo.User, error) {
+	user, err := r.queries.GetUserByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// UpdateUserStatus updates user online status
+func (r *AuthRepository) UpdateUserStatus(ctx context.Context, userID int32, status string) error {
+	return r.queries.UpdateUserStatus(ctx, repo.UpdateUserStatusParams{
+		ID:     userID,
+		Status: status,
+	})
+}
+
+// UpdatePassword updates user password
+func (r *AuthRepository) UpdatePassword(ctx context.Context, userID int32, password string) error {
+	return r.queries.UpdateUserPassword(ctx, repo.UpdateUserPasswordParams{
+		ID:       userID,
+		Password: password,
+	})
+}
+
+// Enable2FA enables or disables 2FA for user
+func (r *AuthRepository) Enable2FA(ctx context.Context, userID int32, enabled bool) error {
+	return r.queries.Enable2FA(ctx, repo.Enable2FAParams{
+		ID:           userID,
+		Is2faEnabled: pgtype.Bool{Bool: enabled, Valid: true},
+	})
+}
+
+// DeleteUser deletes a user account
+func (r *AuthRepository) DeleteUser(ctx context.Context, userID int32) error {
+	return r.queries.DeleteUser(ctx, userID)
 }

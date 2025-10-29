@@ -9,7 +9,36 @@ service FriendService {
   rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
   rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
   rpc RejectFriendRequest(RejectFriendRequestRequest) returns (RejectFriendRequestResponse);
-  rpc GetFriends(GetFriendsRequest) returns (GetFriendsResponse);
+  rpc BlockFriend(BlockRequest) returns (BlockResponse);
+  rpc UnblockFriend(UnblockRequest) returns (UnblockResponse);
+  rpc UpdateAliasName(UpdateAliasNameRequest) returns (UpdateAliasNameResponse);
+  rpc ListFreinds(GetFriendsRequest) returns (stream GetFriendsResponse);
+}
+
+message UpdateAliasNameRequest {
+  int32 user_id = 1 ;
+  int32 friend_id = 2 ;
+  string alias_name = 3 ;
+}
+
+message UpdateAliasNameResponse {
+  bool success = 1;
+}
+
+
+message BlockRequest {
+  int32 user_id = 1 ;
+  int32 friend_id = 2 ;
+}
+message BlockResponse {
+  bool success = 1;
+}
+message UnblockRequest {
+  int32 user_id = 1 ;
+  int32 friend_id = 2 ;
+}
+message UnblockResponse {
+  bool success = 1;
 }
 
 message SendFriendRequestRequest {

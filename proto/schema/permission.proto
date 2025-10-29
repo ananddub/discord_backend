@@ -1,20 +1,79 @@
 syntax = "proto3";
 
-option go_package = "discord/pkg/schema";
+option go_package = "discord/gen/proto/schema";
 package protoschema;
+
+// Permission flags using bitwise operations
+enum PermissionFlag {
+  NONE = 0;
+  CREATE_INVITE = 1;                    // 0x00000001
+  KICK_MEMBERS = 2;                     // 0x00000002
+  BAN_MEMBERS = 4;                      // 0x00000004
+  ADMINISTRATOR = 8;                    // 0x00000008
+  MANAGE_CHANNELS = 16;                 // 0x00000010
+  MANAGE_SERVER = 32;                   // 0x00000020
+  ADD_REACTIONS = 64;                   // 0x00000040
+  VIEW_AUDIT_LOG = 128;                 // 0x00000080
+  PRIORITY_SPEAKER = 256;               // 0x00000100
+  STREAM = 512;                         // 0x00000200
+  VIEW_CHANNEL = 1024;                  // 0x00000400
+  SEND_MESSAGES = 2048;                 // 0x00000800
+  SEND_TTS_MESSAGES = 4096;             // 0x00001000
+  MANAGE_MESSAGES = 8192;               // 0x00002000
+  EMBED_LINKS = 16384;                  // 0x00004000
+  ATTACH_FILES = 32768;                 // 0x00008000
+  READ_MESSAGE_HISTORY = 65536;         // 0x00010000
+  MENTION_EVERYONE = 131072;            // 0x00020000
+  USE_EXTERNAL_EMOJIS = 262144;         // 0x00040000
+  CONNECT = 1048576;                    // 0x00100000
+  SPEAK = 2097152;                      // 0x00200000
+  MUTE_MEMBERS = 4194304;               // 0x00400000
+  DEAFEN_MEMBERS = 8388608;             // 0x00800000
+  MOVE_MEMBERS = 16777216;              // 0x01000000
+  USE_VAD = 33554432;                   // 0x02000000 (Voice Activity Detection)
+  CHANGE_NICKNAME = 67108864;           // 0x04000000
+  MANAGE_NICKNAMES = 134217728;         // 0x08000000
+  MANAGE_ROLES = 268435456;             // 0x10000000
+  MANAGE_WEBHOOKS = 536870912;          // 0x20000000
+}
 
 message Permission {
   int32 id = 1;
   string name = 2;
   string description = 3;
-  int64 created_at = 4;
-  int64 updated_at = 5;
+  int64 permissions = 4; // Bitwise permission flags
+  int64 created_at = 5;
+  int64 updated_at = 6;
 }
 
 message Role {
   int32 id = 1;
-  string name = 2;
-  string description = 3;
+  int32 server_id = 2;
+  string name = 3;
+  string color = 4; // Hex color code
+  bool hoist = 5; // Display separately in member list
+  int32 position = 6;
+  int64 permissions = 7; // Bitwise permission flags
+  bool mentionable = 8;
+  string description = 9;
+  string icon = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
+}
+
+message RolePermission {
+  int32 id = 1;
+  int32 role_id = 2;
+  int32 permission_id = 3;
   int64 created_at = 4;
-  int64 updated_at = 5;
+}
+
+message ChannelPermissionOverwrite {
+  int32 id = 1;
+  int32 channel_id = 2;
+  int32 role_id = 3;
+  int32 user_id = 4; // Either role_id or user_id
+  int64 allow = 5; // Allowed permissions (bitwise)
+  int64 deny = 6;  // Denied permissions (bitwise)
+  int64 created_at = 7;
 }

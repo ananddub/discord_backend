@@ -1,25 +1,86 @@
 syntax = "proto3";
 
-option go_package = "discord/pkg/schema";
+option go_package = "discord/gen/proto/schema";
 package protoschema;
+
+enum MessageType {
+  DEFAULT = 0;
+  REPLY = 1;
+  SYSTEM = 2;
+  USER_JOIN = 3;
+  USER_LEAVE = 4;
+  CALL = 5;
+  CHANNEL_NAME_CHANGE = 6;
+  CHANNEL_ICON_CHANGE = 7;
+  PINNED_MESSAGE = 8;
+}
 
 message Message {
   int32 id = 1;
-  int32 user_id = 2;
+  int32 channel_id = 2;
   int32 sender_id = 3;
   int32 reply_to_message_id = 4;
   string content = 5;
   bool is_read = 6;
+  bool is_edited = 7;
+  bool is_pinned = 8;
+  MessageType type = 9;
+  repeated MessageAttachment attachments = 10;
+  repeated MessageReaction reactions = 11;
+  repeated int32 mention_user_ids = 12;
+  repeated int32 mention_role_ids = 13;
+  bool mention_everyone = 14;
+  int64 created_at = 15;
+  int64 updated_at = 16;
+  int64 edited_at = 17;
+}
+
+message MessageAttachment {
+  int32 id = 1;
+  int32 message_id = 2;
+  string file_url = 3;
+  string file_name = 4;
+  string file_type = 5; // image, video, audio, document
+  int64 file_size = 6;
+  int32 width = 7;  // for images/videos
+  int32 height = 8; // for images/videos
+  int64 created_at = 9;
+}
+
+message MessageReaction {
+  int32 id = 1;
+  int32 message_id = 2;
+  int32 user_id = 3;
+  string emoji = 4;
+  string emoji_id = 5; // for custom emojis
+  int32 count = 6;
   int64 created_at = 7;
 }
 
-message TextMessage {
-  int32 id = 1;
-  int32 text_channel_id = 2;
-  int32 sender_id = 3;
-  int32 reply_to_message_id = 4;
-  string content = 5;
-  int64 sent_at = 6;
-  bool is_edited = 7;
-  int64 created_at = 8;
+message MessageEmbed {
+  string title = 1;
+  string description = 2;
+  string url = 3;
+  string color = 4;
+  string footer_text = 5;
+  string footer_icon_url = 6;
+  string image_url = 7;
+  string thumbnail_url = 8;
+  string author_name = 9;
+  string author_url = 10;
+  string author_icon_url = 11;
+  repeated EmbedField fields = 12;
+  int64 timestamp = 13;
+}
+
+message EmbedField {
+  string name = 1;
+  string value = 2;
+  bool inline = 3;
+}
+
+message TypingIndicator {
+  int32 channel_id = 1;
+  int32 user_id = 2;
+  int64 timestamp = 3;
 }

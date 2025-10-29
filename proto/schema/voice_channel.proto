@@ -1,15 +1,52 @@
 syntax = "proto3";
 
-option go_package = "discord/pkg/schema";
+option go_package = "discord/gen/proto/schema";
 package protoschema;
+
+enum VoiceRegion {
+  AUTO = 0;
+  US_WEST = 1;
+  US_EAST = 2;
+  US_CENTRAL = 3;
+  US_SOUTH = 4;
+  EUROPE = 5;
+  ASIA = 6;
+  BRAZIL = 7;
+  INDIA = 8;
+  JAPAN = 9;
+  RUSSIA = 10;
+  SINGAPORE = 11;
+  SOUTH_AFRICA = 12;
+}
 
 message VoiceChannel {
   int32 id = 1;
   int32 channel_id = 2;
-  bool is_active = 3;
-  double started_at = 4;
-  double ended_at = 5;
-  int64 created_at = 6;
+  int32 server_id = 3;
+  int32 user_limit = 4; // 0 = unlimited
+  int32 bitrate = 5; // in kbps
+  VoiceRegion region = 6;
+  bool is_active = 7;
+  int64 started_at = 8;
+  int64 ended_at = 9;
+  int64 created_at = 10;
+  int64 updated_at = 11;
+}
+
+message VoiceState {
+  int32 id = 1;
+  int32 user_id = 2;
+  int32 channel_id = 3;
+  int32 server_id = 4;
+  string session_id = 5;
+  bool is_muted = 6;
+  bool is_deafened = 7;
+  bool self_mute = 8;
+  bool self_deaf = 9;
+  bool self_video = 10;
+  bool self_stream = 11;
+  bool suppress = 12; // Whether user is suppressed (stage channels)
+  int64 joined_at = 13;
 }
 
 message VoiceChat {
@@ -17,8 +54,21 @@ message VoiceChat {
   int32 voice_channel_id = 2;
   int32 user_id = 3;
   string chat = 4;
-  int32 replay_to_message_id = 5;
+  int32 reply_to_message_id = 5;
   int64 joined_at = 6;
-  double left_at = 7;
+  int64 left_at = 7;
   int64 created_at = 8;
+}
+
+message ScreenShare {
+  int32 id = 1;
+  int32 voice_channel_id = 2;
+  int32 user_id = 3;
+  string stream_key = 4;
+  int32 width = 5;
+  int32 height = 6;
+  int32 fps = 7;
+  bool is_active = 8;
+  int64 started_at = 9;
+  int64 ended_at = 10;
 }

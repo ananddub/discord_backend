@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+option go_package = "discord/gen/proto/schema";
+package protoschema;
+
+message Invite {
+  int32 id = 1;
+  string code = 2; // Unique invite code
+  int32 server_id = 3;
+  int32 channel_id = 4;
+  int32 inviter_id = 5;
+  int32 max_uses = 6; // 0 = unlimited
+  int32 uses = 7;
+  int32 max_age = 8; // In seconds, 0 = never expires
+  bool temporary = 9; // Temporary membership
+  int64 created_at = 10;
+  int64 expires_at = 11;
+}
+
+message Webhook {
+  int32 id = 1;
+  int32 channel_id = 2;
+  int32 server_id = 3;
+  int32 user_id = 4; // Creator
+  string name = 5;
+  string avatar = 6;
+  string token = 7;
+  string url = 8;
+  int64 created_at = 9;
+}
+
+message Emoji {
+  int32 id = 1;
+  int32 server_id = 2;
+  string name = 3;
+  string image_url = 4;
+  bool require_colons = 5;
+  bool managed = 6;
+  bool animated = 7;
+  bool available = 8;
+  int32 creator_id = 9;
+  repeated int32 role_ids = 10; // Roles allowed to use this emoji
+  int64 created_at = 11;
+}
+
+message Sticker {
+  int32 id = 1;
+  int32 server_id = 2;
+  string name = 3;
+  string description = 4;
+  string tags = 5;
+  string image_url = 6;
+  string format_type = 7; // PNG, APNG, LOTTIE
+  int64 created_at = 8;
+}
+
+message AuditLog {
+  int32 id = 1;
+  int32 server_id = 2;
+  int32 user_id = 3; // User who performed action
+  string action = 4; // Action type
+  int32 target_id = 5; // ID of affected entity
+  string target_type = 6; // Type of affected entity
+  string changes = 7; // JSON string of changes
+  string reason = 8;
+  int64 created_at = 9;
+}
+
+message Ban {
+  int32 id = 1;
+  int32 server_id = 2;
+  int32 user_id = 3;
+  int32 moderator_id = 4;
+  string reason = 5;
+  int64 expires_at = 6; // 0 = permanent
+  int64 created_at = 7;
+}

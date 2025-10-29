@@ -8,104 +8,202 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Channel struct {
+type AuditLog struct {
+	ID         int32            `json:"id"`
+	ServerID   int32            `json:"server_id"`
+	UserID     pgtype.Int4      `json:"user_id"`
+	Action     string           `json:"action"`
+	TargetID   pgtype.Int4      `json:"target_id"`
+	TargetType pgtype.Text      `json:"target_type"`
+	Changes    []byte           `json:"changes"`
+	Reason     pgtype.Text      `json:"reason"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+type Ban struct {
 	ID          int32            `json:"id"`
-	UniqueID    string           `json:"unique_id"`
-	Name        string           `json:"name"`
-	Pic         pgtype.Text      `json:"pic"`
-	Position    int32            `json:"position"`
-	Description pgtype.Text      `json:"description"`
-	GroupID     pgtype.Int4      `json:"group_id"`
+	ServerID    int32            `json:"server_id"`
+	UserID      int32            `json:"user_id"`
+	ModeratorID int32            `json:"moderator_id"`
+	Reason      pgtype.Text      `json:"reason"`
+	ExpiresAt   pgtype.Timestamp `json:"expires_at"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
-type ChannelMember struct {
-	ID        int32            `json:"id"`
-	ChannelID int32            `json:"channel_id"`
-	UserID    int32            `json:"user_id"`
-	Role      string           `json:"role"`
-	JoinedAt  pgtype.Timestamp `json:"joined_at"`
+type Channel struct {
+	ID            int32            `json:"id"`
+	ServerID      int32            `json:"server_id"`
+	CategoryID    pgtype.Int4      `json:"category_id"`
+	Name          string           `json:"name"`
+	Type          string           `json:"type"`
+	Position      pgtype.Int4      `json:"position"`
+	Topic         pgtype.Text      `json:"topic"`
+	IsNsfw        pgtype.Bool      `json:"is_nsfw"`
+	SlowmodeDelay pgtype.Int4      `json:"slowmode_delay"`
+	UserLimit     pgtype.Int4      `json:"user_limit"`
+	Bitrate       pgtype.Int4      `json:"bitrate"`
+	IsPrivate     pgtype.Bool      `json:"is_private"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 }
 
-type Counter struct {
-	ID    int32       `json:"id"`
-	Value pgtype.Int4 `json:"value"`
+type ChannelPermission struct {
+	ID               int32            `json:"id"`
+	ChannelID        int32            `json:"channel_id"`
+	RoleID           pgtype.Int4      `json:"role_id"`
+	UserID           pgtype.Int4      `json:"user_id"`
+	AllowPermissions pgtype.Int8      `json:"allow_permissions"`
+	DenyPermissions  pgtype.Int8      `json:"deny_permissions"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+}
+
+type DmChannel struct {
+	ID            int32            `json:"id"`
+	Name          pgtype.Text      `json:"name"`
+	Icon          pgtype.Text      `json:"icon"`
+	OwnerID       pgtype.Int4      `json:"owner_id"`
+	IsGroup       pgtype.Bool      `json:"is_group"`
+	LastMessageID pgtype.Int4      `json:"last_message_id"`
+	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+}
+
+type DmParticipant struct {
+	ID                int32            `json:"id"`
+	DmChannelID       int32            `json:"dm_channel_id"`
+	UserID            int32            `json:"user_id"`
+	LastReadMessageID pgtype.Int4      `json:"last_read_message_id"`
+	JoinedAt          pgtype.Timestamp `json:"joined_at"`
+}
+
+type Emoji struct {
+	ID            int32            `json:"id"`
+	ServerID      int32            `json:"server_id"`
+	Name          string           `json:"name"`
+	ImageUrl      string           `json:"image_url"`
+	CreatorID     pgtype.Int4      `json:"creator_id"`
+	RequireColons pgtype.Bool      `json:"require_colons"`
+	Managed       pgtype.Bool      `json:"managed"`
+	Animated      pgtype.Bool      `json:"animated"`
+	Available     pgtype.Bool      `json:"available"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
 }
 
 type Friend struct {
 	ID         int32            `json:"id"`
-	UserID     pgtype.Int4      `json:"user_id"`
+	UserID     int32            `json:"user_id"`
 	FriendID   int32            `json:"friend_id"`
-	IsAccepted bool             `json:"is_accepted"`
-	IsBlocked  bool             `json:"is_blocked"`
-	IsFavorite bool             `json:"is_favorite"`
-	IsRejected bool             `json:"is_rejected"`
-	IsPending  bool             `json:"is_pending"`
 	Status     string           `json:"status"`
+	AliasName  pgtype.Text      `json:"alias_name"`
+	IsFavorite pgtype.Bool      `json:"is_favorite"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
 	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
 }
 
-type Message struct {
-	ID               int32            `json:"id"`
-	UserID           int32            `json:"user_id"`
-	SenderID         int32            `json:"sender_id"`
-	ReplyToMessageID pgtype.Int4      `json:"reply_to_message_id"`
-	Content          string           `json:"content"`
-	IsRead           bool             `json:"is_read"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
+type Invite struct {
+	ID        int32            `json:"id"`
+	Code      string           `json:"code"`
+	ServerID  int32            `json:"server_id"`
+	ChannelID pgtype.Int4      `json:"channel_id"`
+	InviterID int32            `json:"inviter_id"`
+	MaxUses   pgtype.Int4      `json:"max_uses"`
+	Uses      pgtype.Int4      `json:"uses"`
+	MaxAge    pgtype.Int4      `json:"max_age"`
+	Temporary pgtype.Bool      `json:"temporary"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
 }
 
-type Permission struct {
-	ID          int32            `json:"id"`
-	Name        string           `json:"name"`
-	Description pgtype.Text      `json:"description"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
-	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
+type MemberRole struct {
+	ID         int32            `json:"id"`
+	MemberID   int32            `json:"member_id"`
+	RoleID     int32            `json:"role_id"`
+	AssignedAt pgtype.Timestamp `json:"assigned_at"`
+}
+
+type Message struct {
+	ID               int32            `json:"id"`
+	ChannelID        int32            `json:"channel_id"`
+	SenderID         int32            `json:"sender_id"`
+	Content          string           `json:"content"`
+	MessageType      pgtype.Text      `json:"message_type"`
+	ReplyToMessageID pgtype.Int4      `json:"reply_to_message_id"`
+	IsEdited         pgtype.Bool      `json:"is_edited"`
+	IsPinned         pgtype.Bool      `json:"is_pinned"`
+	MentionEveryone  pgtype.Bool      `json:"mention_everyone"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	EditedAt         pgtype.Timestamp `json:"edited_at"`
+}
+
+type MessageAttachment struct {
+	ID        int32            `json:"id"`
+	MessageID int32            `json:"message_id"`
+	FileUrl   string           `json:"file_url"`
+	FileName  string           `json:"file_name"`
+	FileType  string           `json:"file_type"`
+	FileSize  int64            `json:"file_size"`
+	Width     pgtype.Int4      `json:"width"`
+	Height    pgtype.Int4      `json:"height"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type MessageMention struct {
+	ID        int32            `json:"id"`
+	MessageID int32            `json:"message_id"`
+	UserID    pgtype.Int4      `json:"user_id"`
+	RoleID    pgtype.Int4      `json:"role_id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type MessageReaction struct {
+	ID        int32            `json:"id"`
+	MessageID int32            `json:"message_id"`
+	UserID    int32            `json:"user_id"`
+	Emoji     string           `json:"emoji"`
+	EmojiID   pgtype.Text      `json:"emoji_id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
 type Role struct {
 	ID          int32            `json:"id"`
+	ServerID    int32            `json:"server_id"`
 	Name        string           `json:"name"`
+	Color       pgtype.Text      `json:"color"`
+	Hoist       pgtype.Bool      `json:"hoist"`
+	Position    pgtype.Int4      `json:"position"`
+	Permissions pgtype.Int8      `json:"permissions"`
+	Mentionable pgtype.Bool      `json:"mentionable"`
+	Icon        pgtype.Text      `json:"icon"`
 	Description pgtype.Text      `json:"description"`
+	IsDefault   pgtype.Bool      `json:"is_default"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
-type Sync struct {
-	ID       int32   `json:"id"`
-	Name     string  `json:"name"`
-	LastSync float32 `json:"last_sync"`
-	IsSynced bool    `json:"is_synced"`
-	Status   string  `json:"status"`
+type Server struct {
+	ID          int32            `json:"id"`
+	Name        string           `json:"name"`
+	Icon        pgtype.Text      `json:"icon"`
+	Banner      pgtype.Text      `json:"banner"`
+	Description pgtype.Text      `json:"description"`
+	OwnerID     int32            `json:"owner_id"`
+	Region      pgtype.Text      `json:"region"`
+	MemberCount pgtype.Int4      `json:"member_count"`
+	IsVerified  pgtype.Bool      `json:"is_verified"`
+	VanityUrl   pgtype.Text      `json:"vanity_url"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
-type TextChannel struct {
+type ServerMember struct {
 	ID         int32            `json:"id"`
-	GroupID    pgtype.Int4      `json:"group_id"`
-	Topic      pgtype.Text      `json:"topic"`
-	IsArchived bool             `json:"is_archived"`
-	ArchivedAt pgtype.Timestamp `json:"archived_at"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
-}
-
-type TextGroup struct {
-	ID        int32            `json:"id"`
-	ChannelID string           `json:"channel_id"`
-	Topic     string           `json:"topic"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-}
-
-type TextMessage struct {
-	ID               int32            `json:"id"`
-	TextChannelID    int32            `json:"text_channel_id"`
-	SenderID         int32            `json:"sender_id"`
-	ReplyToMessageID pgtype.Int4      `json:"reply_to_message_id"`
-	Content          string           `json:"content"`
-	SentAt           pgtype.Timestamp `json:"sent_at"`
-	IsEdited         bool             `json:"is_edited"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	ServerID   int32            `json:"server_id"`
+	UserID     int32            `json:"user_id"`
+	Nickname   pgtype.Text      `json:"nickname"`
+	JoinedAt   pgtype.Timestamp `json:"joined_at"`
+	IsMuted    pgtype.Bool      `json:"is_muted"`
+	IsDeafened pgtype.Bool      `json:"is_deafened"`
 }
 
 type User struct {
@@ -116,30 +214,42 @@ type User struct {
 	FullName        pgtype.Text      `json:"full_name"`
 	ProfilePic      pgtype.Text      `json:"profile_pic"`
 	Bio             pgtype.Text      `json:"bio"`
-	CreatedAt       pgtype.Timestamp `json:"created_at"`
-	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 	ColorCode       pgtype.Text      `json:"color_code"`
 	BackgroundColor pgtype.Text      `json:"background_color"`
 	BackgroundPic   pgtype.Text      `json:"background_pic"`
 	Status          string           `json:"status"`
+	CustomStatus    pgtype.Text      `json:"custom_status"`
+	IsBot           pgtype.Bool      `json:"is_bot"`
+	IsVerified      pgtype.Bool      `json:"is_verified"`
+	Is2faEnabled    pgtype.Bool      `json:"is_2fa_enabled"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
 }
 
-type VoiceChannel struct {
-	ID        int32            `json:"id"`
-	ChannelID int32            `json:"channel_id"`
-	IsActive  bool             `json:"is_active"`
-	StartedAt pgtype.Timestamp `json:"started_at"`
-	EndedAt   pgtype.Timestamp `json:"ended_at"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+type UserPresence struct {
+	ID                    int32            `json:"id"`
+	UserID                int32            `json:"user_id"`
+	Status                pgtype.Text      `json:"status"`
+	CustomStatus          pgtype.Text      `json:"custom_status"`
+	CustomStatusEmoji     pgtype.Text      `json:"custom_status_emoji"`
+	CustomStatusExpiresAt pgtype.Timestamp `json:"custom_status_expires_at"`
+	Activity              pgtype.Text      `json:"activity"`
+	LastSeen              pgtype.Timestamp `json:"last_seen"`
+	UpdatedAt             pgtype.Timestamp `json:"updated_at"`
 }
 
-type VoiceChat struct {
-	ID               int32            `json:"id"`
-	VoiceChannelID   int32            `json:"voice_channel_id"`
-	UserID           int32            `json:"user_id"`
-	Chat             string           `json:"chat"`
-	ReplyToMessageID pgtype.Int4      `json:"reply_to_message_id"`
-	JoinedAt         pgtype.Timestamp `json:"joined_at"`
-	LeftAt           pgtype.Timestamp `json:"left_at"`
-	CreatedAt        pgtype.Timestamp `json:"created_at"`
+type VoiceState struct {
+	ID         int32            `json:"id"`
+	UserID     int32            `json:"user_id"`
+	ChannelID  int32            `json:"channel_id"`
+	ServerID   pgtype.Int4      `json:"server_id"`
+	SessionID  string           `json:"session_id"`
+	IsMuted    pgtype.Bool      `json:"is_muted"`
+	IsDeafened pgtype.Bool      `json:"is_deafened"`
+	SelfMute   pgtype.Bool      `json:"self_mute"`
+	SelfDeaf   pgtype.Bool      `json:"self_deaf"`
+	SelfVideo  pgtype.Bool      `json:"self_video"`
+	SelfStream pgtype.Bool      `json:"self_stream"`
+	Suppress   pgtype.Bool      `json:"suppress"`
+	JoinedAt   pgtype.Timestamp `json:"joined_at"`
 }

@@ -21,7 +21,7 @@
   log = "build-errors.log"
   poll = false
   poll_interval = 0
-  pre_cmd = ["task generate"]
+  pre_cmd = ["task sqlc"]
   rerun = false
   rerun_delay = 500
   send_interrupt = true

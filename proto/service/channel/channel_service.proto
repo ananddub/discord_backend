@@ -6,10 +6,29 @@ import "schema/channel.proto";
 package protoservice.channel;
 
 service ChannelService {
+  // Channel Management
   rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
   rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse);
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
+  rpc GetServerChannels(GetServerChannelsRequest) returns (GetServerChannelsResponse);
+  
+  // Category Management
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
+  
+  // Member Management
   rpc JoinChannel(JoinChannelRequest) returns (JoinChannelResponse);
   rpc LeaveChannel(LeaveChannelRequest) returns (LeaveChannelResponse);
+  rpc GetChannelMembers(GetChannelMembersRequest) returns (stream GetChannelMembersResponse);
+  
+  // Permission Management
+  rpc UpdateChannelPermissions(UpdateChannelPermissionsRequest) returns (UpdateChannelPermissionsResponse);
+  rpc GetChannelPermissions(GetChannelPermissionsRequest) returns (GetChannelPermissionsResponse);
+  
+  // Channel Position
+  rpc UpdateChannelPosition(UpdateChannelPositionRequest) returns (UpdateChannelPositionResponse);
 }
 
 message CreateChannelRequest {
@@ -45,5 +64,129 @@ message LeaveChannelRequest {
 }
 
 message LeaveChannelResponse {
+  bool success = 1;
+}
+
+message UpdateChannelRequest {
+  int32 channel_id = 1;
+  string name = 2;
+  string description = 3;
+  string topic = 4;
+  bool is_nsfw = 5;
+  int32 slowmode_delay = 6;
+  int32 position = 7;
+}
+
+message UpdateChannelResponse {
+  bool success = 1;
+}
+
+message DeleteChannelRequest {
+  int32 channel_id = 1;
+}
+
+message DeleteChannelResponse {
+  bool success = 1;
+}
+
+message GetServerChannelsRequest {
+  int32 server_id = 1;
+}
+
+message GetServerChannelsResponse {
+  repeated ChannelInfo channels = 1;
+}
+
+message ChannelInfo {
+  int32 id = 1;
+  string name = 2;
+  string type = 3;
+  int32 position = 4;
+  int32 category_id = 5;
+}
+
+// Category Messages
+message CreateCategoryRequest {
+  int32 server_id = 1;
+  string name = 2;
+  int32 position = 3;
+}
+
+message CreateCategoryResponse {
+  int32 category_id = 1;
+  bool success = 2;
+}
+
+message UpdateCategoryRequest {
+  int32 category_id = 1;
+  string name = 2;
+  int32 position = 3;
+}
+
+message UpdateCategoryResponse {
+  bool success = 1;
+}
+
+message DeleteCategoryRequest {
+  int32 category_id = 1;
+}
+
+message DeleteCategoryResponse {
+  bool success = 1;
+}
+
+// Member Messages
+message GetChannelMembersRequest {
+  int32 channel_id = 1;
+}
+
+message GetChannelMembersResponse {
+  repeated ChannelMemberInfo members = 1;
+}
+
+message ChannelMemberInfo {
+  int32 user_id = 1;
+  string role = 2;
+  bool is_muted = 3;
+  bool is_deafened = 4;
+  int64 joined_at = 5;
+}
+
+// Permission Messages
+message UpdateChannelPermissionsRequest {
+  int32 channel_id = 1;
+  int32 role_id = 2;
+  int32 user_id = 3; // Either role_id or user_id
+  int64 allow = 4; // Bitwise allow permissions
+  int64 deny = 5;  // Bitwise deny permissions
+}
+
+message UpdateChannelPermissionsResponse {
+  bool success = 1;
+}
+
+message GetChannelPermissionsRequest {
+  int32 channel_id = 1;
+}
+
+message GetChannelPermissionsResponse {
+  repeated PermissionOverwrite overwrites = 1;
+}
+
+message PermissionOverwrite {
+  int32 role_id = 1;
+  int32 user_id = 2;
+  int64 allow = 3;
+  int64 deny = 4;
+}
+
+// Position Messages
+message UpdateChannelPositionRequest {
+  int32 channel_id = 1;
+  int32 position = 2;
+  int32 parent_id = 3; // Category ID
+}
+
+message UpdateChannelPositionResponse {
   bool success = 1;
 }

@@ -1,52 +1,291 @@
 version: '3'
 
-tasks:
-  proto:
-    desc: Generate protobuf files using local protoc
-    cmds:
-      - chmod +x generate_local.sh
-      - ./generate_local.sh
-      - echo "Protobuf files generated"
-  clean:
-    desc: Clean generated files
-    cmds:
-      - find . -name "*.pb.go" -delete
+vars:
+  DB_URL: "postgresql://postgres:postgres@localhost:5432/discord?sslmode=disable"
+  GOOSE_DRIVER: postgres
+  MIGRATIONS_DIR: ./sql/migrations
 
+tasks:
+  # Development Commands
+  dev:
+    desc: Run the application in development mode
+    deps: [build]
+    cmds:
+      - ./bin/discord
+
+  watch:
+    desc: Watch and rebuild on changes
+    cmds:
+      - air
+
+  # Build Commands
   build:
     desc: Build the application
-    deps: [proto]
     cmds:
-      - go build -o bin/discord ./cmd/server
+      - go build -o bin/discord ./cmd/grpc
+      - echo "✅ Build completed"
 
+  build:linux:
+    desc: Build for Linux
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build -o bin/discord-linux ./cmd/grpc
+      - echo "✅ Linux build completed"
+
+  build:windows:
+    desc: Build for Windows
+    cmds:
+      - GOOS=windows GOARCH=amd64 go build -o bin/discord.exe ./cmd/grpc
+      - echo "✅ Windows build completed"
+
+  build:all:
+    desc: Build for all platforms
+    deps: [build, build:linux, build:windows]
+    cmds:
+      - echo "✅ All builds completed"
+
+  # Run Commands
   run:
     desc: Run the application
     deps: [build]
     cmds:
       - ./bin/discord
 
-  test:
-    desc: Run tests
+  run:dev:
+    desc: Run with hot reload
     cmds:
-      - go test ./...
+      - air
 
-  deps:
-    desc: Install dependencies
+  # Proto Generation
+  proto:gen:
+    desc: Generate protobuf files using buf
     cmds:
-      - go mod tidy
-      - go install github.com/bufbuild/buf/cmd/buf@latest
+      - buf generate
+      - echo "✅ Protobuf files generated"
 
-  lint:
+  proto:lint:
     desc: Lint proto files
     cmds:
       - buf lint
+      - echo "✅ Proto files linted"
 
-  sqlc:
+  proto:format:
+    desc: Format proto files
+    cmds:
+      - buf format -w
+      - echo "✅ Proto files formatted"
+
+  proto:breaking:
+    desc: Check for breaking changes
+    cmds:
+      - buf breaking --against '.git#branch=main'
+
+  # SQLC Commands
+  sqlc:gen:
     desc: Generate SQLC files
     cmds:
       - sqlc generate
-      - echo "SQLC files generated"
-  generate:
-    desc: Generate protobuf files
+      - echo "✅ SQLC files generated"
+
+  sqlc:compile:
+    desc: Compile SQL queries
     cmds:
-      - echo ""
+      - sqlc compile
+      - echo "✅ SQL queries compiled"
+
+  # Database Commands
+  db:create:
+    desc: Create database
+    cmds:
+      - psql -U postgres -c "CREATE DATABASE discord;"
+      - echo "✅ Database created"
+
+  db:drop:
+    desc: Drop database
+    cmds:
+      - psql -U postgres -c "DROP DATABASE IF EXISTS discord;"
+      - echo "✅ Database dropped"
+
+  db:reset:
+    desc: Reset database
+    deps: [db:drop, db:create, db:migrate]
+    cmds:
+      - echo "✅ Database reset completed"
+
+  db:migrate:
+    desc: Run database migrations
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} {{.GOOSE_DRIVER}} "{{.DB_URL}}" up
+      - echo "✅ Migrations completed"
+
+  db:migrate:down:
+    desc: Rollback last migration
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} {{.GOOSE_DRIVER}} "{{.DB_URL}}" down
+      - echo "✅ Migration rolled back"
+
+  db:migrate:status:
+    desc: Check migration status
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} {{.GOOSE_DRIVER}} "{{.DB_URL}}" status
+
+  db:migrate:create:
+    desc: Create new migration (use NAME=migration_name)
+    cmds:
+      - goose -dir {{.MIGRATIONS_DIR}} create {{.NAME}} sql
+      - echo "✅ Migration {{.NAME}} created"
+
+  db:seed:
+    desc: Seed database with test data
+    cmds:
+      - go run cmd/seed/main.go
+      - echo "✅ Database seeded"
+
+  db:psql:
+    desc: Connect to database
+    cmds:
+      - psql "{{.DB_URL}}"
+
+  # Code Generation
+  gen:all:
+    desc: Generate all code (proto + sqlc)
+    deps: [proto:gen, sqlc:gen]
+    cmds:
+      - echo "✅ All code generated"
+
+  # Testing
+  test:
+    desc: Run all tests
+    cmds:
+      - go test ./... -v
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - go test ./... -v -short
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - go test ./... -v -run Integration
+
+  test:coverage:
+    desc: Run tests with coverage
+    cmds:
+      - go test ./... -coverprofile=coverage.out
+      - go tool cover -html=coverage.out -o coverage.html
+      - echo "✅ Coverage report generated: coverage.html"
+
+  # Code Quality
+  lint:
+    desc: Run all linters
+    cmds:
+      - golangci-lint run
+      - buf lint
+
+  fmt:
+    desc: Format Go code
+    cmds:
+      - gofmt -s -w .
+      - goimports -w .
+      - echo "✅ Code formatted"
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  # Dependencies
+  deps:install:
+    desc: Install all dependencies
+    cmds:
+      - go mod download
+      - go install github.com/bufbuild/buf/cmd/buf@latest
+      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - go install github.com/pressly/goose/v3/cmd/goose@latest
+      - go install github.com/cosmtrek/air@latest
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - echo "✅ All dependencies installed"
+
+  deps:tidy:
+    desc: Tidy go modules
+    cmds:
+      - go mod tidy
+      - echo "✅ Dependencies tidied"
+
+  deps:update:
+    desc: Update dependencies
+    cmds:
+      - go get -u ./...
+      - go mod tidy
+      - echo "✅ Dependencies updated"
+
+  # Docker Commands
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t discord-backend:latest .
+      - echo "✅ Docker image built"
+
+  docker:run:
+    desc: Run Docker container
+    cmds:
+      - docker run -p 50051:50051 discord-backend:latest
+
+  docker:compose:up:
+    desc: Start services with docker-compose
+    cmds:
+      - docker-compose up -d
+      - echo "✅ Services started"
+
+  docker:compose:down:
+    desc: Stop services with docker-compose
+    cmds:
+      - docker-compose down
+      - echo "✅ Services stopped"
+
+  # Cleanup
+  clean:
+    desc: Clean generated files and binaries
+    cmds:
+      - rm -rf bin/
+      - rm -rf gen/proto/
+      - find . -name "*.pb.go" -delete
+      - rm -f coverage.out coverage.html
+      - echo "✅ Cleaned"
+
+  clean:all:
+    desc: Clean everything including cache
+    deps: [clean]
+    cmds:
+      - go clean -cache -testcache -modcache
+      - echo "✅ Deep clean completed"
+
+  # Project Setup
+  setup:
+    desc: Initial project setup
+    cmds:
+      - task deps:install
+      - task db:create
+      - task db:migrate
+      - task gen:all
+      - echo "✅ Project setup completed"
+
+  # Help
+  help:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # Production
+  prod:build:
+    desc: Build for production
+    cmds:
+      - CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w" -o bin/discord ./cmd/grpc
+      - echo "✅ Production build completed"
+
+  prod:deploy:
+    desc: Deploy to production
+    cmds:
+      - echo "🚀 Deploying to production..."
+      - # Add your deployment commands here
     deps: [proto,sqlc]

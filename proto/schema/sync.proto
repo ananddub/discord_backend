@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "discord/pkg/schema";
+option go_package = "discord/gen/proto/schema";
 package protoschema;
 
 message Sync {

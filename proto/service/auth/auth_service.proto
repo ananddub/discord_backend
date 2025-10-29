@@ -1,14 +1,20 @@
 syntax = "proto3";
-
-option go_package = "discord/pkg/service/auth";
+option go_package = "discord/gen/proto/service/auth";
 
 package service.auth;
+import "schema/user.proto";
 
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
   rpc ForgotPassword(ForgotPasswordRequest) returns (ForgotPasswordResponse);
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc Enable2FA(Enable2FARequest) returns (Enable2FAResponse);
+  rpc Verify2FA(Verify2FARequest) returns (Verify2FAResponse);
 }
 
 message RegisterRequest {
@@ -16,8 +22,6 @@ message RegisterRequest {
   string email    = 2;
   string password = 3 ;
 }
-
-
 
 message RegisterResponse {
   string message = 1;
@@ -29,7 +33,9 @@ message LoginRequest {
 }
 
 message LoginResponse {
-  string token = 1;
+  string access_token = 1;
+  string refresh_token = 2;
+  protoschema.User user = 3;
 }
 
 message ForgotPasswordRequest {
@@ -47,4 +53,64 @@ message ResetPasswordRequest {
 
 message ResetPasswordResponse {
   string message = 1;
+}
+
+message LogoutRequest {
+  string access_token = 1;
+}
+
+message LogoutResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  bool success = 3;
+}
+
+message VerifyEmailRequest {
+  string token = 1;
+}
+
+message VerifyEmailResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+message ChangePasswordRequest {
+  int32 user_id = 1;
+  string old_password = 2;
+  string new_password = 3;
+}
+
+message ChangePasswordResponse {
+  string message = 1;
+  bool success = 2;
+}
+
+message Enable2FARequest {
+  int32 user_id = 1;
+}
+
+message Enable2FAResponse {
+  string secret = 1;
+  string qr_code_url = 2;
+  repeated string backup_codes = 3;
+  bool success = 4;
+}
+
+message Verify2FARequest {
+  int32 user_id = 1;
+  string code = 2;
+}
+
+message Verify2FAResponse {
+  bool valid = 1;
+  string message = 2;
 }

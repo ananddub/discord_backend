@@ -1,0 +1,243 @@
+syntax = "proto3";
+
+option go_package = "discord/gen/proto/service/server";
+import "schema/channel.proto";
+import "schema/server.proto";
+
+package protoservice.server;
+
+service ServerService {
+  // Server Management
+  rpc CreateServer(CreateServerRequest) returns (CreateServerResponse);
+  rpc GetServer(GetServerRequest) returns (GetServerResponse);
+  rpc UpdateServer(UpdateServerRequest) returns (UpdateServerResponse);
+  rpc DeleteServer(DeleteServerRequest) returns (DeleteServerResponse);
+  rpc GetUserServers(GetUserServersRequest) returns (GetUserServersResponse);
+  
+  // Member Management
+  rpc AddMember(AddMemberRequest) returns (AddMemberResponse);
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
+  rpc GetMembers(GetMembersRequest) returns (stream GetMembersResponse);
+  rpc UpdateMember(UpdateMemberRequest) returns (UpdateMemberResponse);
+  rpc KickMember(KickMemberRequest) returns (KickMemberResponse);
+  rpc BanMember(BanMemberRequest) returns (BanMemberResponse);
+  rpc UnbanMember(UnbanMemberRequest) returns (UnbanMemberResponse);
+  
+  // Invite Management
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
+  rpc GetInvite(GetInviteRequest) returns (GetInviteResponse);
+  rpc DeleteInvite(DeleteInviteRequest) returns (DeleteInviteResponse);
+  rpc GetServerInvites(GetServerInvitesRequest) returns (GetServerInvitesResponse);
+  rpc JoinServerWithInvite(JoinServerWithInviteRequest) returns (JoinServerWithInviteResponse);
+  
+  // Emoji & Sticker Management
+  rpc CreateEmoji(CreateEmojiRequest) returns (CreateEmojiResponse);
+  rpc DeleteEmoji(DeleteEmojiRequest) returns (DeleteEmojiResponse);
+  rpc GetServerEmojis(GetServerEmojisRequest) returns (GetServerEmojisResponse);
+}
+
+// Server Management Messages
+message CreateServerRequest {
+  string name = 1;
+  string icon = 2;
+  string description = 3;
+  int32 owner_id = 4;
+  string region = 5;
+}
+
+message CreateServerResponse {
+  protoschema.Server server = 1;
+  bool success = 2;
+}
+
+message GetServerRequest {
+  int32 server_id = 1;
+}
+
+message GetServerResponse {
+  protoschema.Server server = 1;
+}
+
+message UpdateServerRequest {
+  int32 server_id = 1;
+  string name = 2;
+  string icon = 3;
+  string banner = 4;
+  string description = 5;
+  string region = 6;
+}
+
+message UpdateServerResponse {
+  protoschema.Server server = 1;
+  bool success = 2;
+}
+
+message DeleteServerRequest {
+  int32 server_id = 1;
+}
+
+message DeleteServerResponse {
+  bool success = 1;
+}
+
+message GetUserServersRequest {
+  int32 user_id = 1;
+}
+
+message GetUserServersResponse {
+  repeated protoschema.Server servers = 1;
+}
+
+// Member Management Messages
+message AddMemberRequest {
+  int32 server_id = 1;
+  int32 user_id = 2;
+}
+
+message AddMemberResponse {
+  protoschema.ServerMember member = 1;
+  bool success = 2;
+}
+
+message RemoveMemberRequest {
+  int32 server_id = 1;
+  int32 user_id = 2;
+}
+
+message RemoveMemberResponse {
+  bool success = 1;
+}
+
+message GetMembersRequest {
+  int32 server_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetMembersResponse {
+  repeated protoschema.ServerMember members = 1;
+}
+
+message UpdateMemberRequest {
+  int32 server_id = 1;
+  int32 user_id = 2;
+  string nickname = 3;
+  repeated int32 role_ids = 4;
+}
+
+message UpdateMemberResponse {
+  protoschema.ServerMember member = 1;
+  bool success = 2;
+}
+
+message KickMemberRequest {
+  int32 server_id = 1;
+  int32 user_id = 2;
+  int32 moderator_id = 3;
+  string reason = 4;
+}
+
+message KickMemberResponse {
+  bool success = 1;
+}
+
+message BanMemberRequest {
+  int32 server_id = 1;
+  int32 user_id = 2;
+  int32 moderator_id = 3;
+  string reason = 4;
+  int32 delete_message_days = 5;
+}
+
+message BanMemberResponse {
+  protoschema.Ban ban = 1;
+  bool success = 2;
+}
+
+message UnbanMemberRequest {
+  int32 server_id = 1;
+  int32 user_id = 2;
+  int32 moderator_id = 3;
+}
+
+message UnbanMemberResponse {
+  bool success = 1;
+}
+
+// Invite Management Messages
+message CreateInviteRequest {
+  int32 server_id = 1;
+  int32 channel_id = 2;
+  int32 inviter_id = 3;
+  int32 max_age = 4;
+  int32 max_uses = 5;
+  bool temporary = 6;
+}
+
+message CreateInviteResponse {
+  protoschema.Invite invite = 1;
+  bool success = 2;
+}
+
+message GetInviteRequest {
+  string code = 1;
+}
+
+message GetInviteResponse {
+  protoschema.Invite invite = 1;
+}
+
+message DeleteInviteRequest {
+  string code = 1;
+}
+
+message DeleteInviteResponse {
+  bool success = 1;
+}
+
+message GetServerInvitesRequest {
+  int32 server_id = 1;
+}
+
+message GetServerInvitesResponse {
+  repeated protoschema.Invite invites = 1;
+}
+
+message JoinServerWithInviteRequest {
+  string code = 1;
+  int32 user_id = 2;
+}
+
+message JoinServerWithInviteResponse {
+  protoschema.Server server = 1;
+  bool success = 2;
+}
+
+// Emoji Messages
+message CreateEmojiRequest {
+  int32 server_id = 1;
+  string name = 2;
+  string image = 3; // base64 encoded
+  repeated int32 role_ids = 4;
+}
+
+message CreateEmojiResponse {
+  protoschema.Emoji emoji = 1;
+  bool success = 2;
+}
+
+message DeleteEmojiRequest {
+  int32 emoji_id = 1;
+}
+
+message DeleteEmojiResponse {
+  bool success = 1;
+}
+
+message GetServerEmojisRequest {
+  int32 server_id = 1;
+}
+
+message GetServerEmojisResponse {
+  repeated protoschema.Emoji emojis = 1;
+}
