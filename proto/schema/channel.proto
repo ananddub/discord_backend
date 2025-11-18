@@ -27,6 +27,7 @@ message Server {
   int64 created_at = 10;
   int64 updated_at = 11;
   bool is_deleted = 12;
+  optional string operation = 13;
 }
 
 message Channel {
@@ -45,6 +46,7 @@ message Channel {
   int64 created_at = 13;
   int64 updated_at = 14;
   bool is_deleted = 15;
+  optional string operation = 16;
 }
 
 message ChannelMember {

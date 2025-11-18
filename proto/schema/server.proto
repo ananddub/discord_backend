@@ -16,6 +16,7 @@ message Invite {
   int64 created_at = 10;
   int64 expires_at = 11;
   bool is_deleted = 12;
+  optional string operation = 13;
 }
 
 message Webhook {
@@ -28,6 +29,7 @@ message Webhook {
   string token = 7;
   string url = 8;
   int64 created_at = 9;
+  optional string operation = 10;
 }
 
 message Emoji {
@@ -43,6 +45,7 @@ message Emoji {
   repeated int32 role_ids = 10; // Roles allowed to use this emoji
   int64 created_at = 11;
   bool is_deleted = 12;
+  optional string operation = 13;
 }
 
 message Sticker {
@@ -54,6 +57,7 @@ message Sticker {
   string image_url = 6;
   string format_type = 7; // PNG, APNG, LOTTIE
   int64 created_at = 8;
+  optional string operation = 9;
 }
 
 message AuditLog {
@@ -66,6 +70,7 @@ message AuditLog {
   string changes = 7; // JSON string of changes
   string reason = 8;
   int64 created_at = 9;
+  optional string operation = 10;
 }
 
 message Ban {
@@ -77,4 +82,5 @@ message Ban {
   int64 expires_at = 6; // 0 = permanent
   int64 created_at = 7;
   bool is_deleted = 8;
+  optional string operation = 9;
 }
