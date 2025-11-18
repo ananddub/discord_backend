@@ -19,41 +19,44 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DirectMessageService_CreateDMChannel_FullMethodName       = "/protoservice.dm.DirectMessageService/CreateDMChannel"
-	DirectMessageService_CreateGroupDM_FullMethodName         = "/protoservice.dm.DirectMessageService/CreateGroupDM"
-	DirectMessageService_GetDMChannel_FullMethodName          = "/protoservice.dm.DirectMessageService/GetDMChannel"
-	DirectMessageService_GetUserDMChannels_FullMethodName     = "/protoservice.dm.DirectMessageService/GetUserDMChannels"
-	DirectMessageService_CloseDMChannel_FullMethodName        = "/protoservice.dm.DirectMessageService/CloseDMChannel"
-	DirectMessageService_AddUserToGroupDM_FullMethodName      = "/protoservice.dm.DirectMessageService/AddUserToGroupDM"
-	DirectMessageService_RemoveUserFromGroupDM_FullMethodName = "/protoservice.dm.DirectMessageService/RemoveUserFromGroupDM"
-	DirectMessageService_UpdateGroupDM_FullMethodName         = "/protoservice.dm.DirectMessageService/UpdateGroupDM"
-	DirectMessageService_SendDM_FullMethodName                = "/protoservice.dm.DirectMessageService/SendDM"
-	DirectMessageService_GetDMMessages_FullMethodName         = "/protoservice.dm.DirectMessageService/GetDMMessages"
-	DirectMessageService_EditDM_FullMethodName                = "/protoservice.dm.DirectMessageService/EditDM"
-	DirectMessageService_DeleteDM_FullMethodName              = "/protoservice.dm.DirectMessageService/DeleteDM"
-	DirectMessageService_MarkAsRead_FullMethodName            = "/protoservice.dm.DirectMessageService/MarkAsRead"
+	DirectMessageService_SendMessage_FullMethodName        = "/protoservice.dm.DirectMessageService/SendMessage"
+	DirectMessageService_GetMessages_FullMethodName        = "/protoservice.dm.DirectMessageService/GetMessages"
+	DirectMessageService_GetMessage_FullMethodName         = "/protoservice.dm.DirectMessageService/GetMessage"
+	DirectMessageService_EditMessage_FullMethodName        = "/protoservice.dm.DirectMessageService/EditMessage"
+	DirectMessageService_DeleteMessage_FullMethodName      = "/protoservice.dm.DirectMessageService/DeleteMessage"
+	DirectMessageService_PinMessage_FullMethodName         = "/protoservice.dm.DirectMessageService/PinMessage"
+	DirectMessageService_UnpinMessage_FullMethodName       = "/protoservice.dm.DirectMessageService/UnpinMessage"
+	DirectMessageService_GetPinnedMessages_FullMethodName  = "/protoservice.dm.DirectMessageService/GetPinnedMessages"
+	DirectMessageService_AddReaction_FullMethodName        = "/protoservice.dm.DirectMessageService/AddReaction"
+	DirectMessageService_RemoveReaction_FullMethodName     = "/protoservice.dm.DirectMessageService/RemoveReaction"
+	DirectMessageService_GetReactions_FullMethodName       = "/protoservice.dm.DirectMessageService/GetReactions"
+	DirectMessageService_SendTyping_FullMethodName         = "/protoservice.dm.DirectMessageService/SendTyping"
+	DirectMessageService_BulkDeleteMessages_FullMethodName = "/protoservice.dm.DirectMessageService/BulkDeleteMessages"
+	DirectMessageService_SearchMessages_FullMethodName     = "/protoservice.dm.DirectMessageService/SearchMessages"
 )
 
 // DirectMessageServiceClient is the client API for DirectMessageService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DirectMessageServiceClient interface {
-	// DM Channel Management
-	CreateDMChannel(ctx context.Context, in *CreateDMChannelRequest, opts ...grpc.CallOption) (*CreateDMChannelResponse, error)
-	CreateGroupDM(ctx context.Context, in *CreateGroupDMRequest, opts ...grpc.CallOption) (*CreateGroupDMResponse, error)
-	GetDMChannel(ctx context.Context, in *GetDMChannelRequest, opts ...grpc.CallOption) (*GetDMChannelResponse, error)
-	GetUserDMChannels(ctx context.Context, in *GetUserDMChannelsRequest, opts ...grpc.CallOption) (*GetUserDMChannelsResponse, error)
-	CloseDMChannel(ctx context.Context, in *CloseDMChannelRequest, opts ...grpc.CallOption) (*CloseDMChannelResponse, error)
-	// Group DM Management
-	AddUserToGroupDM(ctx context.Context, in *AddUserToGroupDMRequest, opts ...grpc.CallOption) (*AddUserToGroupDMResponse, error)
-	RemoveUserFromGroupDM(ctx context.Context, in *RemoveUserFromGroupDMRequest, opts ...grpc.CallOption) (*RemoveUserFromGroupDMResponse, error)
-	UpdateGroupDM(ctx context.Context, in *UpdateGroupDMRequest, opts ...grpc.CallOption) (*UpdateGroupDMResponse, error)
-	// Message Management
-	SendDM(ctx context.Context, in *SendDMRequest, opts ...grpc.CallOption) (*SendDMResponse, error)
-	GetDMMessages(ctx context.Context, in *GetDMMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetDMMessagesResponse], error)
-	EditDM(ctx context.Context, in *EditDMRequest, opts ...grpc.CallOption) (*EditDMResponse, error)
-	DeleteDM(ctx context.Context, in *DeleteDMRequest, opts ...grpc.CallOption) (*DeleteDMResponse, error)
-	MarkAsRead(ctx context.Context, in *MarkAsReadRequest, opts ...grpc.CallOption) (*MarkAsReadResponse, error)
+	// Message Operations
+	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
+	GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetMessagesResponse], error)
+	GetMessage(ctx context.Context, in *GetMessageRequest, opts ...grpc.CallOption) (*GetMessageResponse, error)
+	EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error)
+	DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error)
+	// Message Interactions
+	PinMessage(ctx context.Context, in *PinMessageRequest, opts ...grpc.CallOption) (*PinMessageResponse, error)
+	UnpinMessage(ctx context.Context, in *UnpinMessageRequest, opts ...grpc.CallOption) (*UnpinMessageResponse, error)
+	GetPinnedMessages(ctx context.Context, in *GetPinnedMessagesRequest, opts ...grpc.CallOption) (*GetPinnedMessagesResponse, error)
+	AddReaction(ctx context.Context, in *AddReactionRequest, opts ...grpc.CallOption) (*AddReactionResponse, error)
+	RemoveReaction(ctx context.Context, in *RemoveReactionRequest, opts ...grpc.CallOption) (*RemoveReactionResponse, error)
+	GetReactions(ctx context.Context, in *GetReactionsRequest, opts ...grpc.CallOption) (*GetReactionsResponse, error)
+	// Typing Indicator
+	SendTyping(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SendTypingRequest, SendTypingResponse], error)
+	// Bulk Operations
+	BulkDeleteMessages(ctx context.Context, in *BulkDeleteMessagesRequest, opts ...grpc.CallOption) (*BulkDeleteMessagesResponse, error)
+	SearchMessages(ctx context.Context, in *SearchMessagesRequest, opts ...grpc.CallOption) (*SearchMessagesResponse, error)
 }
 
 type directMessageServiceClient struct {
@@ -64,103 +67,23 @@ func NewDirectMessageServiceClient(cc grpc.ClientConnInterface) DirectMessageSer
 	return &directMessageServiceClient{cc}
 }
 
-func (c *directMessageServiceClient) CreateDMChannel(ctx context.Context, in *CreateDMChannelRequest, opts ...grpc.CallOption) (*CreateDMChannelResponse, error) {
+func (c *directMessageServiceClient) SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateDMChannelResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_CreateDMChannel_FullMethodName, in, out, cOpts...)
+	out := new(SendMessageResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_SendMessage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *directMessageServiceClient) CreateGroupDM(ctx context.Context, in *CreateGroupDMRequest, opts ...grpc.CallOption) (*CreateGroupDMResponse, error) {
+func (c *directMessageServiceClient) GetMessages(ctx context.Context, in *GetMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetMessagesResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateGroupDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_CreateGroupDM_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &DirectMessageService_ServiceDesc.Streams[0], DirectMessageService_GetMessages_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) GetDMChannel(ctx context.Context, in *GetDMChannelRequest, opts ...grpc.CallOption) (*GetDMChannelResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetDMChannelResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_GetDMChannel_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) GetUserDMChannels(ctx context.Context, in *GetUserDMChannelsRequest, opts ...grpc.CallOption) (*GetUserDMChannelsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetUserDMChannelsResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_GetUserDMChannels_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) CloseDMChannel(ctx context.Context, in *CloseDMChannelRequest, opts ...grpc.CallOption) (*CloseDMChannelResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CloseDMChannelResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_CloseDMChannel_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) AddUserToGroupDM(ctx context.Context, in *AddUserToGroupDMRequest, opts ...grpc.CallOption) (*AddUserToGroupDMResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(AddUserToGroupDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_AddUserToGroupDM_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) RemoveUserFromGroupDM(ctx context.Context, in *RemoveUserFromGroupDMRequest, opts ...grpc.CallOption) (*RemoveUserFromGroupDMResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RemoveUserFromGroupDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_RemoveUserFromGroupDM_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) UpdateGroupDM(ctx context.Context, in *UpdateGroupDMRequest, opts ...grpc.CallOption) (*UpdateGroupDMResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateGroupDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_UpdateGroupDM_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) SendDM(ctx context.Context, in *SendDMRequest, opts ...grpc.CallOption) (*SendDMResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_SendDM_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *directMessageServiceClient) GetDMMessages(ctx context.Context, in *GetDMMessagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetDMMessagesResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &DirectMessageService_ServiceDesc.Streams[0], DirectMessageService_GetDMMessages_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[GetDMMessagesRequest, GetDMMessagesResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[GetMessagesRequest, GetMessagesResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -171,32 +94,125 @@ func (c *directMessageServiceClient) GetDMMessages(ctx context.Context, in *GetD
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type DirectMessageService_GetDMMessagesClient = grpc.ServerStreamingClient[GetDMMessagesResponse]
+type DirectMessageService_GetMessagesClient = grpc.ServerStreamingClient[GetMessagesResponse]
 
-func (c *directMessageServiceClient) EditDM(ctx context.Context, in *EditDMRequest, opts ...grpc.CallOption) (*EditDMResponse, error) {
+func (c *directMessageServiceClient) GetMessage(ctx context.Context, in *GetMessageRequest, opts ...grpc.CallOption) (*GetMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EditDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_EditDM_FullMethodName, in, out, cOpts...)
+	out := new(GetMessageResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_GetMessage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *directMessageServiceClient) DeleteDM(ctx context.Context, in *DeleteDMRequest, opts ...grpc.CallOption) (*DeleteDMResponse, error) {
+func (c *directMessageServiceClient) EditMessage(ctx context.Context, in *EditMessageRequest, opts ...grpc.CallOption) (*EditMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteDMResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_DeleteDM_FullMethodName, in, out, cOpts...)
+	out := new(EditMessageResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_EditMessage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *directMessageServiceClient) MarkAsRead(ctx context.Context, in *MarkAsReadRequest, opts ...grpc.CallOption) (*MarkAsReadResponse, error) {
+func (c *directMessageServiceClient) DeleteMessage(ctx context.Context, in *DeleteMessageRequest, opts ...grpc.CallOption) (*DeleteMessageResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MarkAsReadResponse)
-	err := c.cc.Invoke(ctx, DirectMessageService_MarkAsRead_FullMethodName, in, out, cOpts...)
+	out := new(DeleteMessageResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_DeleteMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) PinMessage(ctx context.Context, in *PinMessageRequest, opts ...grpc.CallOption) (*PinMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PinMessageResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_PinMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) UnpinMessage(ctx context.Context, in *UnpinMessageRequest, opts ...grpc.CallOption) (*UnpinMessageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnpinMessageResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_UnpinMessage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) GetPinnedMessages(ctx context.Context, in *GetPinnedMessagesRequest, opts ...grpc.CallOption) (*GetPinnedMessagesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPinnedMessagesResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_GetPinnedMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) AddReaction(ctx context.Context, in *AddReactionRequest, opts ...grpc.CallOption) (*AddReactionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddReactionResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_AddReaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) RemoveReaction(ctx context.Context, in *RemoveReactionRequest, opts ...grpc.CallOption) (*RemoveReactionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RemoveReactionResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_RemoveReaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) GetReactions(ctx context.Context, in *GetReactionsRequest, opts ...grpc.CallOption) (*GetReactionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetReactionsResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_GetReactions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) SendTyping(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SendTypingRequest, SendTypingResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &DirectMessageService_ServiceDesc.Streams[1], DirectMessageService_SendTyping_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SendTypingRequest, SendTypingResponse]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DirectMessageService_SendTypingClient = grpc.BidiStreamingClient[SendTypingRequest, SendTypingResponse]
+
+func (c *directMessageServiceClient) BulkDeleteMessages(ctx context.Context, in *BulkDeleteMessagesRequest, opts ...grpc.CallOption) (*BulkDeleteMessagesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BulkDeleteMessagesResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_BulkDeleteMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *directMessageServiceClient) SearchMessages(ctx context.Context, in *SearchMessagesRequest, opts ...grpc.CallOption) (*SearchMessagesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchMessagesResponse)
+	err := c.cc.Invoke(ctx, DirectMessageService_SearchMessages_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -207,22 +223,24 @@ func (c *directMessageServiceClient) MarkAsRead(ctx context.Context, in *MarkAsR
 // All implementations must embed UnimplementedDirectMessageServiceServer
 // for forward compatibility.
 type DirectMessageServiceServer interface {
-	// DM Channel Management
-	CreateDMChannel(context.Context, *CreateDMChannelRequest) (*CreateDMChannelResponse, error)
-	CreateGroupDM(context.Context, *CreateGroupDMRequest) (*CreateGroupDMResponse, error)
-	GetDMChannel(context.Context, *GetDMChannelRequest) (*GetDMChannelResponse, error)
-	GetUserDMChannels(context.Context, *GetUserDMChannelsRequest) (*GetUserDMChannelsResponse, error)
-	CloseDMChannel(context.Context, *CloseDMChannelRequest) (*CloseDMChannelResponse, error)
-	// Group DM Management
-	AddUserToGroupDM(context.Context, *AddUserToGroupDMRequest) (*AddUserToGroupDMResponse, error)
-	RemoveUserFromGroupDM(context.Context, *RemoveUserFromGroupDMRequest) (*RemoveUserFromGroupDMResponse, error)
-	UpdateGroupDM(context.Context, *UpdateGroupDMRequest) (*UpdateGroupDMResponse, error)
-	// Message Management
-	SendDM(context.Context, *SendDMRequest) (*SendDMResponse, error)
-	GetDMMessages(*GetDMMessagesRequest, grpc.ServerStreamingServer[GetDMMessagesResponse]) error
-	EditDM(context.Context, *EditDMRequest) (*EditDMResponse, error)
-	DeleteDM(context.Context, *DeleteDMRequest) (*DeleteDMResponse, error)
-	MarkAsRead(context.Context, *MarkAsReadRequest) (*MarkAsReadResponse, error)
+	// Message Operations
+	SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error)
+	GetMessages(*GetMessagesRequest, grpc.ServerStreamingServer[GetMessagesResponse]) error
+	GetMessage(context.Context, *GetMessageRequest) (*GetMessageResponse, error)
+	EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error)
+	DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error)
+	// Message Interactions
+	PinMessage(context.Context, *PinMessageRequest) (*PinMessageResponse, error)
+	UnpinMessage(context.Context, *UnpinMessageRequest) (*UnpinMessageResponse, error)
+	GetPinnedMessages(context.Context, *GetPinnedMessagesRequest) (*GetPinnedMessagesResponse, error)
+	AddReaction(context.Context, *AddReactionRequest) (*AddReactionResponse, error)
+	RemoveReaction(context.Context, *RemoveReactionRequest) (*RemoveReactionResponse, error)
+	GetReactions(context.Context, *GetReactionsRequest) (*GetReactionsResponse, error)
+	// Typing Indicator
+	SendTyping(grpc.BidiStreamingServer[SendTypingRequest, SendTypingResponse]) error
+	// Bulk Operations
+	BulkDeleteMessages(context.Context, *BulkDeleteMessagesRequest) (*BulkDeleteMessagesResponse, error)
+	SearchMessages(context.Context, *SearchMessagesRequest) (*SearchMessagesResponse, error)
 	mustEmbedUnimplementedDirectMessageServiceServer()
 }
 
@@ -233,44 +251,47 @@ type DirectMessageServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedDirectMessageServiceServer struct{}
 
-func (UnimplementedDirectMessageServiceServer) CreateDMChannel(context.Context, *CreateDMChannelRequest) (*CreateDMChannelResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateDMChannel not implemented")
+func (UnimplementedDirectMessageServiceServer) SendMessage(context.Context, *SendMessageRequest) (*SendMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) CreateGroupDM(context.Context, *CreateGroupDMRequest) (*CreateGroupDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateGroupDM not implemented")
+func (UnimplementedDirectMessageServiceServer) GetMessages(*GetMessagesRequest, grpc.ServerStreamingServer[GetMessagesResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method GetMessages not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) GetDMChannel(context.Context, *GetDMChannelRequest) (*GetDMChannelResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetDMChannel not implemented")
+func (UnimplementedDirectMessageServiceServer) GetMessage(context.Context, *GetMessageRequest) (*GetMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMessage not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) GetUserDMChannels(context.Context, *GetUserDMChannelsRequest) (*GetUserDMChannelsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetUserDMChannels not implemented")
+func (UnimplementedDirectMessageServiceServer) EditMessage(context.Context, *EditMessageRequest) (*EditMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EditMessage not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) CloseDMChannel(context.Context, *CloseDMChannelRequest) (*CloseDMChannelResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CloseDMChannel not implemented")
+func (UnimplementedDirectMessageServiceServer) DeleteMessage(context.Context, *DeleteMessageRequest) (*DeleteMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteMessage not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) AddUserToGroupDM(context.Context, *AddUserToGroupDMRequest) (*AddUserToGroupDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddUserToGroupDM not implemented")
+func (UnimplementedDirectMessageServiceServer) PinMessage(context.Context, *PinMessageRequest) (*PinMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PinMessage not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) RemoveUserFromGroupDM(context.Context, *RemoveUserFromGroupDMRequest) (*RemoveUserFromGroupDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveUserFromGroupDM not implemented")
+func (UnimplementedDirectMessageServiceServer) UnpinMessage(context.Context, *UnpinMessageRequest) (*UnpinMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnpinMessage not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) UpdateGroupDM(context.Context, *UpdateGroupDMRequest) (*UpdateGroupDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateGroupDM not implemented")
+func (UnimplementedDirectMessageServiceServer) GetPinnedMessages(context.Context, *GetPinnedMessagesRequest) (*GetPinnedMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPinnedMessages not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) SendDM(context.Context, *SendDMRequest) (*SendDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendDM not implemented")
+func (UnimplementedDirectMessageServiceServer) AddReaction(context.Context, *AddReactionRequest) (*AddReactionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddReaction not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) GetDMMessages(*GetDMMessagesRequest, grpc.ServerStreamingServer[GetDMMessagesResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method GetDMMessages not implemented")
+func (UnimplementedDirectMessageServiceServer) RemoveReaction(context.Context, *RemoveReactionRequest) (*RemoveReactionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveReaction not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) EditDM(context.Context, *EditDMRequest) (*EditDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EditDM not implemented")
+func (UnimplementedDirectMessageServiceServer) GetReactions(context.Context, *GetReactionsRequest) (*GetReactionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReactions not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) DeleteDM(context.Context, *DeleteDMRequest) (*DeleteDMResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteDM not implemented")
+func (UnimplementedDirectMessageServiceServer) SendTyping(grpc.BidiStreamingServer[SendTypingRequest, SendTypingResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method SendTyping not implemented")
 }
-func (UnimplementedDirectMessageServiceServer) MarkAsRead(context.Context, *MarkAsReadRequest) (*MarkAsReadResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method MarkAsRead not implemented")
+func (UnimplementedDirectMessageServiceServer) BulkDeleteMessages(context.Context, *BulkDeleteMessagesRequest) (*BulkDeleteMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BulkDeleteMessages not implemented")
+}
+func (UnimplementedDirectMessageServiceServer) SearchMessages(context.Context, *SearchMessagesRequest) (*SearchMessagesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchMessages not implemented")
 }
 func (UnimplementedDirectMessageServiceServer) mustEmbedUnimplementedDirectMessageServiceServer() {}
 func (UnimplementedDirectMessageServiceServer) testEmbeddedByValue()                              {}
@@ -293,229 +314,236 @@ func RegisterDirectMessageServiceServer(s grpc.ServiceRegistrar, srv DirectMessa
 	s.RegisterService(&DirectMessageService_ServiceDesc, srv)
 }
 
-func _DirectMessageService_CreateDMChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateDMChannelRequest)
+func _DirectMessageService_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).CreateDMChannel(ctx, in)
+		return srv.(DirectMessageServiceServer).SendMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DirectMessageService_CreateDMChannel_FullMethodName,
+		FullMethod: DirectMessageService_SendMessage_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).CreateDMChannel(ctx, req.(*CreateDMChannelRequest))
+		return srv.(DirectMessageServiceServer).SendMessage(ctx, req.(*SendMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DirectMessageService_CreateGroupDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateGroupDMRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).CreateGroupDM(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_CreateGroupDM_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).CreateGroupDM(ctx, req.(*CreateGroupDMRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_GetDMChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetDMChannelRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).GetDMChannel(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_GetDMChannel_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).GetDMChannel(ctx, req.(*GetDMChannelRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_GetUserDMChannels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetUserDMChannelsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).GetUserDMChannels(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_GetUserDMChannels_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).GetUserDMChannels(ctx, req.(*GetUserDMChannelsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_CloseDMChannel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CloseDMChannelRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).CloseDMChannel(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_CloseDMChannel_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).CloseDMChannel(ctx, req.(*CloseDMChannelRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_AddUserToGroupDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddUserToGroupDMRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).AddUserToGroupDM(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_AddUserToGroupDM_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).AddUserToGroupDM(ctx, req.(*AddUserToGroupDMRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_RemoveUserFromGroupDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveUserFromGroupDMRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).RemoveUserFromGroupDM(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_RemoveUserFromGroupDM_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).RemoveUserFromGroupDM(ctx, req.(*RemoveUserFromGroupDMRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_UpdateGroupDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateGroupDMRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).UpdateGroupDM(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_UpdateGroupDM_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).UpdateGroupDM(ctx, req.(*UpdateGroupDMRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_SendDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendDMRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).SendDM(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DirectMessageService_SendDM_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).SendDM(ctx, req.(*SendDMRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DirectMessageService_GetDMMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GetDMMessagesRequest)
+func _DirectMessageService_GetMessages_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetMessagesRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(DirectMessageServiceServer).GetDMMessages(m, &grpc.GenericServerStream[GetDMMessagesRequest, GetDMMessagesResponse]{ServerStream: stream})
+	return srv.(DirectMessageServiceServer).GetMessages(m, &grpc.GenericServerStream[GetMessagesRequest, GetMessagesResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type DirectMessageService_GetDMMessagesServer = grpc.ServerStreamingServer[GetDMMessagesResponse]
+type DirectMessageService_GetMessagesServer = grpc.ServerStreamingServer[GetMessagesResponse]
 
-func _DirectMessageService_EditDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EditDMRequest)
+func _DirectMessageService_GetMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).EditDM(ctx, in)
+		return srv.(DirectMessageServiceServer).GetMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DirectMessageService_EditDM_FullMethodName,
+		FullMethod: DirectMessageService_GetMessage_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).EditDM(ctx, req.(*EditDMRequest))
+		return srv.(DirectMessageServiceServer).GetMessage(ctx, req.(*GetMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DirectMessageService_DeleteDM_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteDMRequest)
+func _DirectMessageService_EditMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EditMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).DeleteDM(ctx, in)
+		return srv.(DirectMessageServiceServer).EditMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DirectMessageService_DeleteDM_FullMethodName,
+		FullMethod: DirectMessageService_EditMessage_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).DeleteDM(ctx, req.(*DeleteDMRequest))
+		return srv.(DirectMessageServiceServer).EditMessage(ctx, req.(*EditMessageRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DirectMessageService_MarkAsRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MarkAsReadRequest)
+func _DirectMessageService_DeleteMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteMessageRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DirectMessageServiceServer).MarkAsRead(ctx, in)
+		return srv.(DirectMessageServiceServer).DeleteMessage(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DirectMessageService_MarkAsRead_FullMethodName,
+		FullMethod: DirectMessageService_DeleteMessage_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DirectMessageServiceServer).MarkAsRead(ctx, req.(*MarkAsReadRequest))
+		return srv.(DirectMessageServiceServer).DeleteMessage(ctx, req.(*DeleteMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_PinMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PinMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).PinMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_PinMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).PinMessage(ctx, req.(*PinMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_UnpinMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnpinMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).UnpinMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_UnpinMessage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).UnpinMessage(ctx, req.(*UnpinMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_GetPinnedMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPinnedMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).GetPinnedMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_GetPinnedMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).GetPinnedMessages(ctx, req.(*GetPinnedMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_AddReaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddReactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).AddReaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_AddReaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).AddReaction(ctx, req.(*AddReactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_RemoveReaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveReactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).RemoveReaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_RemoveReaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).RemoveReaction(ctx, req.(*RemoveReactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_GetReactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReactionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).GetReactions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_GetReactions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).GetReactions(ctx, req.(*GetReactionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_SendTyping_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DirectMessageServiceServer).SendTyping(&grpc.GenericServerStream[SendTypingRequest, SendTypingResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type DirectMessageService_SendTypingServer = grpc.BidiStreamingServer[SendTypingRequest, SendTypingResponse]
+
+func _DirectMessageService_BulkDeleteMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkDeleteMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).BulkDeleteMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_BulkDeleteMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).BulkDeleteMessages(ctx, req.(*BulkDeleteMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DirectMessageService_SearchMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DirectMessageServiceServer).SearchMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DirectMessageService_SearchMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DirectMessageServiceServer).SearchMessages(ctx, req.(*SearchMessagesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -528,59 +556,65 @@ var DirectMessageService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*DirectMessageServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateDMChannel",
-			Handler:    _DirectMessageService_CreateDMChannel_Handler,
+			MethodName: "SendMessage",
+			Handler:    _DirectMessageService_SendMessage_Handler,
 		},
 		{
-			MethodName: "CreateGroupDM",
-			Handler:    _DirectMessageService_CreateGroupDM_Handler,
+			MethodName: "GetMessage",
+			Handler:    _DirectMessageService_GetMessage_Handler,
 		},
 		{
-			MethodName: "GetDMChannel",
-			Handler:    _DirectMessageService_GetDMChannel_Handler,
+			MethodName: "EditMessage",
+			Handler:    _DirectMessageService_EditMessage_Handler,
 		},
 		{
-			MethodName: "GetUserDMChannels",
-			Handler:    _DirectMessageService_GetUserDMChannels_Handler,
+			MethodName: "DeleteMessage",
+			Handler:    _DirectMessageService_DeleteMessage_Handler,
 		},
 		{
-			MethodName: "CloseDMChannel",
-			Handler:    _DirectMessageService_CloseDMChannel_Handler,
+			MethodName: "PinMessage",
+			Handler:    _DirectMessageService_PinMessage_Handler,
 		},
 		{
-			MethodName: "AddUserToGroupDM",
-			Handler:    _DirectMessageService_AddUserToGroupDM_Handler,
+			MethodName: "UnpinMessage",
+			Handler:    _DirectMessageService_UnpinMessage_Handler,
 		},
 		{
-			MethodName: "RemoveUserFromGroupDM",
-			Handler:    _DirectMessageService_RemoveUserFromGroupDM_Handler,
+			MethodName: "GetPinnedMessages",
+			Handler:    _DirectMessageService_GetPinnedMessages_Handler,
 		},
 		{
-			MethodName: "UpdateGroupDM",
-			Handler:    _DirectMessageService_UpdateGroupDM_Handler,
+			MethodName: "AddReaction",
+			Handler:    _DirectMessageService_AddReaction_Handler,
 		},
 		{
-			MethodName: "SendDM",
-			Handler:    _DirectMessageService_SendDM_Handler,
+			MethodName: "RemoveReaction",
+			Handler:    _DirectMessageService_RemoveReaction_Handler,
 		},
 		{
-			MethodName: "EditDM",
-			Handler:    _DirectMessageService_EditDM_Handler,
+			MethodName: "GetReactions",
+			Handler:    _DirectMessageService_GetReactions_Handler,
 		},
 		{
-			MethodName: "DeleteDM",
-			Handler:    _DirectMessageService_DeleteDM_Handler,
+			MethodName: "BulkDeleteMessages",
+			Handler:    _DirectMessageService_BulkDeleteMessages_Handler,
 		},
 		{
-			MethodName: "MarkAsRead",
-			Handler:    _DirectMessageService_MarkAsRead_Handler,
+			MethodName: "SearchMessages",
+			Handler:    _DirectMessageService_SearchMessages_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "GetDMMessages",
-			Handler:       _DirectMessageService_GetDMMessages_Handler,
+			StreamName:    "GetMessages",
+			Handler:       _DirectMessageService_GetMessages_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "SendTyping",
+			Handler:       _DirectMessageService_SendTyping_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "service/dm/dm_service.proto",

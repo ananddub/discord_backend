@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -25,10 +26,17 @@ type ServiceStruct struct {
 	Environment string `koanf:"environment"`
 	Port        string `koanf:"port"`
 }
-
+type S3Struct struct {
+	Endpoint  string `koanf:"endpoint"`
+	Bucket    string `koanf:"bucket"`
+	AccessKey string `koanf:"accessKey"`
+	SecretKey string `koanf:"secretKey"`
+	UseSSL    bool   `koanf:"useSSL"`
+}
 type Config struct {
 	Database DatabaseStruct `koanf:"database"`
 	Service  ServiceStruct  `koanf:"service"`
+	S3       S3Struct       `koanf:"s3"`
 }
 
 var cfg *Config = nil

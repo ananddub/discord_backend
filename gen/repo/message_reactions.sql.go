@@ -14,8 +14,10 @@ import (
 const countReactions = `-- name: CountReactions :one
 SELECT emoji, COUNT(*) as count
 FROM message_reactions
-WHERE message_id = $1
-GROUP BY emoji
+WHERE
+    message_id = $1
+GROUP BY
+    emoji
 `
 
 type CountReactionsRow struct {
@@ -31,11 +33,16 @@ func (q *Queries) CountReactions(ctx context.Context, messageID int32) (CountRea
 }
 
 const createReaction = `-- name: CreateReaction :one
-INSERT INTO message_reactions (
-    message_id, user_id, emoji, emoji_id
-) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, message_id, user_id, emoji, emoji_id, created_at
+INSERT INTO
+    message_reactions (
+        message_id,
+        user_id,
+        emoji,
+        emoji_id
+    )
+VALUES ($1, $2, $3, $4)
+RETURNING
+    id, message_id, user_id, emoji, emoji_id, created_at
 `
 
 type CreateReactionParams struct {
@@ -64,19 +71,32 @@ func (q *Queries) CreateReaction(ctx context.Context, arg CreateReactionParams) 
 	return i, err
 }
 
-const deleteAllReactions = `-- name: DeleteAllReactions :exec
-DELETE FROM message_reactions
-WHERE message_id = $1
+const deleteAllReactions = `-- name: DeleteAllReactions :one
+DELETE FROM message_reactions WHERE message_id = $1 RETURNING id, message_id, user_id, emoji, emoji_id, created_at
 `
 
-func (q *Queries) DeleteAllReactions(ctx context.Context, messageID int32) error {
-	_, err := q.db.Exec(ctx, deleteAllReactions, messageID)
-	return err
+func (q *Queries) DeleteAllReactions(ctx context.Context, messageID int32) (MessageReaction, error) {
+	row := q.db.QueryRow(ctx, deleteAllReactions, messageID)
+	var i MessageReaction
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.UserID,
+		&i.Emoji,
+		&i.EmojiID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const deleteReaction = `-- name: DeleteReaction :exec
+const deleteReaction = `-- name: DeleteReaction :one
 DELETE FROM message_reactions
-WHERE message_id = $1 AND user_id = $2 AND emoji = $3
+WHERE
+    message_id = $1
+    AND user_id = $2
+    AND emoji = $3
+RETURNING
+    id, message_id, user_id, emoji, emoji_id, created_at
 `
 
 type DeleteReactionParams struct {
@@ -85,14 +105,22 @@ type DeleteReactionParams struct {
 	Emoji     string `json:"emoji"`
 }
 
-func (q *Queries) DeleteReaction(ctx context.Context, arg DeleteReactionParams) error {
-	_, err := q.db.Exec(ctx, deleteReaction, arg.MessageID, arg.UserID, arg.Emoji)
-	return err
+func (q *Queries) DeleteReaction(ctx context.Context, arg DeleteReactionParams) (MessageReaction, error) {
+	row := q.db.QueryRow(ctx, deleteReaction, arg.MessageID, arg.UserID, arg.Emoji)
+	var i MessageReaction
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.UserID,
+		&i.Emoji,
+		&i.EmojiID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getMessageReactions = `-- name: GetMessageReactions :many
-SELECT id, message_id, user_id, emoji, emoji_id, created_at FROM message_reactions
-WHERE message_id = $1
+SELECT id, message_id, user_id, emoji, emoji_id, created_at FROM message_reactions WHERE message_id = $1
 `
 
 func (q *Queries) GetMessageReactions(ctx context.Context, messageID int32) ([]MessageReaction, error) {
@@ -123,8 +151,7 @@ func (q *Queries) GetMessageReactions(ctx context.Context, messageID int32) ([]M
 }
 
 const getReactionsByEmoji = `-- name: GetReactionsByEmoji :many
-SELECT id, message_id, user_id, emoji, emoji_id, created_at FROM message_reactions
-WHERE message_id = $1 AND emoji = $2
+SELECT id, message_id, user_id, emoji, emoji_id, created_at FROM message_reactions WHERE message_id = $1 AND emoji = $2
 `
 
 type GetReactionsByEmojiParams struct {

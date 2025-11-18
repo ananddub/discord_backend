@@ -19,21 +19,25 @@ message Message {
   int32 id = 1;
   int32 channel_id = 2;
   int32 sender_id = 3;
-  int32 reply_to_message_id = 4;
-  string content = 5;
-  bool is_read = 6;
-  bool is_edited = 7;
-  bool is_pinned = 8;
-  MessageType type = 9;
-  repeated MessageAttachment attachments = 10;
-  repeated MessageReaction reactions = 11;
-  repeated int32 mention_user_ids = 12;
-  repeated int32 mention_role_ids = 13;
-  bool mention_everyone = 14;
-  int64 created_at = 15;
-  int64 updated_at = 16;
-  int64 edited_at = 17;
-  bool is_deleted = 18;
+  int32 receiver_id = 4; // for DMs
+  bool is_channel = 5;
+  int32 reply_to_message_id = 6;
+  string content = 7;
+  bool is_read = 8;
+  bool is_edited = 9;
+  bool is_pinned = 10;
+  MessageType type = 11;
+  repeated MessageAttachment attachments = 12;
+  repeated MessageReaction reactions = 13;
+  repeated int32 mention_user_ids = 14;
+  repeated int32 mention_role_ids = 15;
+  bool mention_everyone = 16;
+  int64 created_at = 17;
+  int64 updated_at = 18;
+  int64 edited_at = 19;
+  bool is_deleted = 20;
+
+  optional string operation = 21;
 }
 
 message MessageAttachment {
@@ -47,6 +51,8 @@ message MessageAttachment {
   int32 height = 8; // for images/videos
   int64 created_at = 9;
   bool is_deleted = 10;
+
+  optional string operation = 11;
 }
 
 message MessageReaction {
@@ -57,6 +63,8 @@ message MessageReaction {
   string emoji_id = 5; // for custom emojis
   int32 count = 6;
   int64 created_at = 7;
+
+  optional string operation = 8;
 }
 
 message MessageEmbed {
@@ -73,6 +81,8 @@ message MessageEmbed {
   string author_icon_url = 11;
   repeated EmbedField fields = 12;
   int64 timestamp = 13;
+
+  optional string operation = 14;
 }
 
 message EmbedField {

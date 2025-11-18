@@ -11,25 +11,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const clearExpiredCustomStatuses = `-- name: ClearExpiredCustomStatuses :exec
+const clearExpiredCustomStatuses = `-- name: ClearExpiredCustomStatuses :one
 UPDATE user_presence
-SET 
+SET
     custom_status = NULL,
     custom_status_emoji = NULL,
     custom_status_expires_at = NULL,
     updated_at = CURRENT_TIMESTAMP
-WHERE custom_status_expires_at IS NOT NULL 
-  AND custom_status_expires_at < CURRENT_TIMESTAMP
+WHERE
+    custom_status_expires_at IS NOT NULL
+    AND custom_status_expires_at < CURRENT_TIMESTAMP
+RETURNING
+    id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at
 `
 
-func (q *Queries) ClearExpiredCustomStatuses(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, clearExpiredCustomStatuses)
-	return err
+func (q *Queries) ClearExpiredCustomStatuses(ctx context.Context) (UserPresence, error) {
+	row := q.db.QueryRow(ctx, clearExpiredCustomStatuses)
+	var i UserPresence
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Status,
+		&i.CustomStatus,
+		&i.CustomStatusEmoji,
+		&i.CustomStatusExpiresAt,
+		&i.Activity,
+		&i.LastSeen,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getMultipleUserPresences = `-- name: GetMultipleUserPresences :many
-SELECT id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at FROM user_presence
-WHERE user_id = ANY($1::int[])
+SELECT id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at FROM user_presence WHERE user_id = ANY ($1::int[])
 `
 
 func (q *Queries) GetMultipleUserPresences(ctx context.Context, dollar_1 []int32) ([]UserPresence, error) {
@@ -63,8 +77,7 @@ func (q *Queries) GetMultipleUserPresences(ctx context.Context, dollar_1 []int32
 }
 
 const getUserPresence = `-- name: GetUserPresence :one
-SELECT id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at FROM user_presence
-WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at FROM user_presence WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserPresence(ctx context.Context, userID int32) (UserPresence, error) {
@@ -84,14 +97,17 @@ func (q *Queries) GetUserPresence(ctx context.Context, userID int32) (UserPresen
 	return i, err
 }
 
-const setCustomStatus = `-- name: SetCustomStatus :exec
+const setCustomStatus = `-- name: SetCustomStatus :one
 UPDATE user_presence
-SET 
+SET
     custom_status = $2,
     custom_status_emoji = $3,
     custom_status_expires_at = $4,
     updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1
+WHERE
+    user_id = $1
+RETURNING
+    id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at
 `
 
 type SetCustomStatusParams struct {
@@ -101,20 +117,38 @@ type SetCustomStatusParams struct {
 	CustomStatusExpiresAt pgtype.Timestamp `json:"custom_status_expires_at"`
 }
 
-func (q *Queries) SetCustomStatus(ctx context.Context, arg SetCustomStatusParams) error {
-	_, err := q.db.Exec(ctx, setCustomStatus,
+func (q *Queries) SetCustomStatus(ctx context.Context, arg SetCustomStatusParams) (UserPresence, error) {
+	row := q.db.QueryRow(ctx, setCustomStatus,
 		arg.UserID,
 		arg.CustomStatus,
 		arg.CustomStatusEmoji,
 		arg.CustomStatusExpiresAt,
 	)
-	return err
+	var i UserPresence
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Status,
+		&i.CustomStatus,
+		&i.CustomStatusEmoji,
+		&i.CustomStatusExpiresAt,
+		&i.Activity,
+		&i.LastSeen,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const updatePresenceStatus = `-- name: UpdatePresenceStatus :exec
+const updatePresenceStatus = `-- name: UpdatePresenceStatus :one
 UPDATE user_presence
-SET status = $2, last_seen = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1
+SET
+    status = $2,
+    last_seen = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+RETURNING
+    id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at
 `
 
 type UpdatePresenceStatusParams struct {
@@ -122,26 +156,52 @@ type UpdatePresenceStatusParams struct {
 	Status pgtype.Text `json:"status"`
 }
 
-func (q *Queries) UpdatePresenceStatus(ctx context.Context, arg UpdatePresenceStatusParams) error {
-	_, err := q.db.Exec(ctx, updatePresenceStatus, arg.UserID, arg.Status)
-	return err
+func (q *Queries) UpdatePresenceStatus(ctx context.Context, arg UpdatePresenceStatusParams) (UserPresence, error) {
+	row := q.db.QueryRow(ctx, updatePresenceStatus, arg.UserID, arg.Status)
+	var i UserPresence
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Status,
+		&i.CustomStatus,
+		&i.CustomStatusEmoji,
+		&i.CustomStatusExpiresAt,
+		&i.Activity,
+		&i.LastSeen,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const upsertUserPresence = `-- name: UpsertUserPresence :one
-INSERT INTO user_presence (
-    user_id, status, custom_status, custom_status_emoji, activity, last_seen
-) VALUES (
-    $1, $2, $3, $4, $5, CURRENT_TIMESTAMP
-)
-ON CONFLICT (user_id) 
-DO UPDATE SET
+INSERT INTO
+    user_presence (
+        user_id,
+        status,
+        custom_status,
+        custom_status_emoji,
+        activity,
+        last_seen
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        CURRENT_TIMESTAMP
+    )
+ON CONFLICT (user_id) DO
+UPDATE
+SET
     status = EXCLUDED.status,
     custom_status = EXCLUDED.custom_status,
     custom_status_emoji = EXCLUDED.custom_status_emoji,
     activity = EXCLUDED.activity,
     last_seen = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
-RETURNING id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at
+RETURNING
+    id, user_id, status, custom_status, custom_status_emoji, custom_status_expires_at, activity, last_seen, updated_at
 `
 
 type UpsertUserPresenceParams struct {

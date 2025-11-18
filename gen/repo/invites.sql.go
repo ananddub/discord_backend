@@ -12,11 +12,29 @@ import (
 )
 
 const createInvite = `-- name: CreateInvite :one
-INSERT INTO invites (
-    code, server_id, channel_id, inviter_id, max_uses, max_age, temporary, expires_at
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
-) RETURNING id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
+INSERT INTO
+    invites (
+        code,
+        server_id,
+        channel_id,
+        inviter_id,
+        max_uses,
+        max_age,
+        temporary,
+        expires_at
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8
+    )
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
 type CreateInviteParams struct {
@@ -60,8 +78,7 @@ func (q *Queries) CreateInvite(ctx context.Context, arg CreateInviteParams) (Inv
 }
 
 const getInviteByCode = `-- name: GetInviteByCode :one
-SELECT id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at FROM invites
-WHERE code = $1 AND is_deleted = FALSE LIMIT 1
+SELECT id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at FROM invites WHERE code = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetInviteByCode(ctx context.Context, code string) (Invite, error) {
@@ -85,8 +102,11 @@ func (q *Queries) GetInviteByCode(ctx context.Context, code string) (Invite, err
 }
 
 const getServerInvites = `-- name: GetServerInvites :many
-SELECT id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at FROM invites
-WHERE server_id = $1 AND is_deleted = FALSE
+SELECT id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
+FROM invites
+WHERE
+    server_id = $1
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -123,87 +143,238 @@ func (q *Queries) GetServerInvites(ctx context.Context, serverID int32) ([]Invit
 	return items, nil
 }
 
-const hardDeleteExpiredInvites = `-- name: HardDeleteExpiredInvites :exec
+const hardDeleteExpiredInvites = `-- name: HardDeleteExpiredInvites :one
 DELETE FROM invites
-WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
+WHERE
+    expires_at IS NOT NULL
+    AND expires_at < CURRENT_TIMESTAMP
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) HardDeleteExpiredInvites(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, hardDeleteExpiredInvites)
-	return err
+func (q *Queries) HardDeleteExpiredInvites(ctx context.Context) (Invite, error) {
+	row := q.db.QueryRow(ctx, hardDeleteExpiredInvites)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const hardDeleteInvite = `-- name: HardDeleteInvite :exec
-DELETE FROM invites
-WHERE code = $1
+const hardDeleteInvite = `-- name: HardDeleteInvite :one
+DELETE FROM invites WHERE code = $1 RETURNING id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) HardDeleteInvite(ctx context.Context, code string) error {
-	_, err := q.db.Exec(ctx, hardDeleteInvite, code)
-	return err
+func (q *Queries) HardDeleteInvite(ctx context.Context, code string) (Invite, error) {
+	row := q.db.QueryRow(ctx, hardDeleteInvite, code)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const hardDeleteInvitesByServer = `-- name: HardDeleteInvitesByServer :exec
-DELETE FROM invites
-WHERE server_id = $1
+const hardDeleteInvitesByServer = `-- name: HardDeleteInvitesByServer :one
+DELETE FROM invites WHERE server_id = $1 RETURNING id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) HardDeleteInvitesByServer(ctx context.Context, serverID int32) error {
-	_, err := q.db.Exec(ctx, hardDeleteInvitesByServer, serverID)
-	return err
+func (q *Queries) HardDeleteInvitesByServer(ctx context.Context, serverID int32) (Invite, error) {
+	row := q.db.QueryRow(ctx, hardDeleteInvitesByServer, serverID)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const incrementInviteUses = `-- name: IncrementInviteUses :exec
+const incrementInviteUses = `-- name: IncrementInviteUses :one
 UPDATE invites
-SET uses = uses + 1, updated_at = CURRENT_TIMESTAMP
-WHERE code = $1 AND is_deleted = FALSE
+SET
+    uses = uses + 1,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    code = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) IncrementInviteUses(ctx context.Context, code string) error {
-	_, err := q.db.Exec(ctx, incrementInviteUses, code)
-	return err
+func (q *Queries) IncrementInviteUses(ctx context.Context, code string) (Invite, error) {
+	row := q.db.QueryRow(ctx, incrementInviteUses, code)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const restoreInvite = `-- name: RestoreInvite :exec
+const restoreInvite = `-- name: RestoreInvite :one
 UPDATE invites
-SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE code = $1
+SET
+    is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    code = $1
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) RestoreInvite(ctx context.Context, code string) error {
-	_, err := q.db.Exec(ctx, restoreInvite, code)
-	return err
+func (q *Queries) RestoreInvite(ctx context.Context, code string) (Invite, error) {
+	row := q.db.QueryRow(ctx, restoreInvite, code)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const softDeleteExpiredInvites = `-- name: SoftDeleteExpiredInvites :exec
+const softDeleteExpiredInvites = `-- name: SoftDeleteExpiredInvites :one
 UPDATE invites
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP AND is_deleted = FALSE
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    expires_at IS NOT NULL
+    AND expires_at < CURRENT_TIMESTAMP
+    AND is_deleted = FALSE
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) SoftDeleteExpiredInvites(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, softDeleteExpiredInvites)
-	return err
+func (q *Queries) SoftDeleteExpiredInvites(ctx context.Context) (Invite, error) {
+	row := q.db.QueryRow(ctx, softDeleteExpiredInvites)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const softDeleteInvite = `-- name: SoftDeleteInvite :exec
+const softDeleteInvite = `-- name: SoftDeleteInvite :one
 UPDATE invites
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE code = $1
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    code = $1
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) SoftDeleteInvite(ctx context.Context, code string) error {
-	_, err := q.db.Exec(ctx, softDeleteInvite, code)
-	return err
+func (q *Queries) SoftDeleteInvite(ctx context.Context, code string) (Invite, error) {
+	row := q.db.QueryRow(ctx, softDeleteInvite, code)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
-const softDeleteInvitesByServer = `-- name: SoftDeleteInvitesByServer :exec
+const softDeleteInvitesByServer = `-- name: SoftDeleteInvitesByServer :one
 UPDATE invites
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE server_id = $1 AND is_deleted = FALSE
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    server_id = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, code, server_id, channel_id, inviter_id, max_uses, uses, max_age, temporary, is_deleted, created_at, expires_at
 `
 
-func (q *Queries) SoftDeleteInvitesByServer(ctx context.Context, serverID int32) error {
-	_, err := q.db.Exec(ctx, softDeleteInvitesByServer, serverID)
-	return err
+func (q *Queries) SoftDeleteInvitesByServer(ctx context.Context, serverID int32) (Invite, error) {
+	row := q.db.QueryRow(ctx, softDeleteInvitesByServer, serverID)
+	var i Invite
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.ServerID,
+		&i.ChannelID,
+		&i.InviterID,
+		&i.MaxUses,
+		&i.Uses,
+		&i.MaxAge,
+		&i.Temporary,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }

@@ -11,46 +11,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const blockUser = `-- name: BlockUser :exec
+const acceptFriendRequest = `-- name: AcceptFriendRequest :one
 UPDATE friends
-SET status = 'blocked', updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
+SET
+    is_pending = FALSE,
+    is_accepted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_pending = TRUE
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
-type BlockUserParams struct {
+type AcceptFriendRequestParams struct {
 	UserID   int32 `json:"user_id"`
 	FriendID int32 `json:"friend_id"`
 }
 
-func (q *Queries) BlockUser(ctx context.Context, arg BlockUserParams) error {
-	_, err := q.db.Exec(ctx, blockUser, arg.UserID, arg.FriendID)
-	return err
-}
-
-const createFriend = `-- name: CreateFriend :one
-INSERT INTO friends (
-    user_id, friend_id, status
-) VALUES (
-    $1, $2, $3
-) RETURNING id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at
-`
-
-type CreateFriendParams struct {
-	UserID   int32  `json:"user_id"`
-	FriendID int32  `json:"friend_id"`
-	Status   string `json:"status"`
-}
-
-func (q *Queries) CreateFriend(ctx context.Context, arg CreateFriendParams) (Friend, error) {
-	row := q.db.QueryRow(ctx, createFriend, arg.UserID, arg.FriendID, arg.Status)
+func (q *Queries) AcceptFriendRequest(ctx context.Context, arg AcceptFriendRequestParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, acceptFriendRequest, arg.UserID, arg.FriendID)
 	var i Friend
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.FriendID,
-		&i.Status,
 		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
 		&i.IsFavorite,
+		&i.IsMuted,
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -58,9 +51,185 @@ func (q *Queries) CreateFriend(ctx context.Context, arg CreateFriendParams) (Fri
 	return i, err
 }
 
+const blockUser = `-- name: BlockUser :one
+UPDATE friends
+SET
+    is_blocked = TRUE,
+    is_accepted = FALSE,
+    is_muted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type BlockUserParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) BlockUser(ctx context.Context, arg BlockUserParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, blockUser, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const countAcceptedFriends = `-- name: CountAcceptedFriends :one
+SELECT COUNT(*) as total
+FROM friends
+WHERE
+    user_id = $1
+    AND is_accepted = TRUE
+    AND is_blocked = FALSE
+    AND is_deleted = FALSE
+`
+
+func (q *Queries) CountAcceptedFriends(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countAcceptedFriends, userID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const countBlockedUsers = `-- name: CountBlockedUsers :one
+SELECT COUNT(*) as total
+FROM friends
+WHERE
+    user_id = $1
+    AND is_blocked = TRUE
+    AND is_deleted = FALSE
+`
+
+func (q *Queries) CountBlockedUsers(ctx context.Context, userID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countBlockedUsers, userID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const countPendingRequests = `-- name: CountPendingRequests :one
+SELECT COUNT(*) as total
+FROM friends
+WHERE
+    friend_id = $1
+    AND is_pending = TRUE
+    AND is_deleted = FALSE
+`
+
+func (q *Queries) CountPendingRequests(ctx context.Context, friendID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, countPendingRequests, friendID)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const createFriend = `-- name: CreateFriend :one
+INSERT INTO
+    friends (
+        user_id,
+        friend_id,
+        is_pending,
+        is_accepted
+    )
+VALUES ($1, $2, TRUE, FALSE)
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type CreateFriendParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) CreateFriend(ctx context.Context, arg CreateFriendParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, createFriend, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAcceptedFriends = `-- name: GetAcceptedFriends :many
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND is_accepted = TRUE
+    AND is_blocked = FALSE
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAcceptedFriends(ctx context.Context, userID int32) ([]Friend, error) {
+	rows, err := q.db.Query(ctx, getAcceptedFriends, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Friend
+	for rows.Next() {
+		var i Friend
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.FriendID,
+			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
+			&i.IsFavorite,
+			&i.IsMuted,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBlockedUsers = `-- name: GetBlockedUsers :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
-WHERE user_id = $1 AND status = 'blocked'
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND is_blocked = TRUE
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
 `
 
 func (q *Queries) GetBlockedUsers(ctx context.Context, userID int32) ([]Friend, error) {
@@ -76,9 +245,115 @@ func (q *Queries) GetBlockedUsers(ctx context.Context, userID int32) ([]Friend, 
 			&i.ID,
 			&i.UserID,
 			&i.FriendID,
-			&i.Status,
 			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
 			&i.IsFavorite,
+			&i.IsMuted,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFavoriteFriends = `-- name: GetFavoriteFriends :many
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND is_favorite = TRUE
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetFavoriteFriends(ctx context.Context, userID int32) ([]Friend, error) {
+	rows, err := q.db.Query(ctx, getFavoriteFriends, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Friend
+	for rows.Next() {
+		var i Friend
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.FriendID,
+			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
+			&i.IsFavorite,
+			&i.IsMuted,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getFriendsWithFlags = `-- name: GetFriendsWithFlags :many
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND is_accepted = $2
+    AND is_blocked = $3
+    AND is_muted = $4
+    AND is_favorite = $5
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+`
+
+type GetFriendsWithFlagsParams struct {
+	UserID     int32       `json:"user_id"`
+	IsAccepted pgtype.Bool `json:"is_accepted"`
+	IsBlocked  pgtype.Bool `json:"is_blocked"`
+	IsMuted    pgtype.Bool `json:"is_muted"`
+	IsFavorite pgtype.Bool `json:"is_favorite"`
+}
+
+func (q *Queries) GetFriendsWithFlags(ctx context.Context, arg GetFriendsWithFlagsParams) ([]Friend, error) {
+	rows, err := q.db.Query(ctx, getFriendsWithFlags,
+		arg.UserID,
+		arg.IsAccepted,
+		arg.IsBlocked,
+		arg.IsMuted,
+		arg.IsFavorite,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Friend
+	for rows.Next() {
+		var i Friend
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.FriendID,
+			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
+			&i.IsFavorite,
+			&i.IsMuted,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -94,8 +369,13 @@ func (q *Queries) GetBlockedUsers(ctx context.Context, userID int32) ([]Friend, 
 }
 
 const getFriendship = `-- name: GetFriendship :one
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
-WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE LIMIT 1
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+LIMIT 1
 `
 
 type GetFriendshipParams struct {
@@ -110,9 +390,12 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 		&i.ID,
 		&i.UserID,
 		&i.FriendID,
-		&i.Status,
 		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
 		&i.IsFavorite,
+		&i.IsMuted,
 		&i.IsDeleted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -120,9 +403,56 @@ func (q *Queries) GetFriendship(ctx context.Context, arg GetFriendshipParams) (F
 	return i, err
 }
 
+const getMutedFriends = `-- name: GetMutedFriends :many
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND is_muted = TRUE
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetMutedFriends(ctx context.Context, userID int32) ([]Friend, error) {
+	rows, err := q.db.Query(ctx, getMutedFriends, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Friend
+	for rows.Next() {
+		var i Friend
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.FriendID,
+			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
+			&i.IsFavorite,
+			&i.IsMuted,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPendingFriendRequests = `-- name: GetPendingFriendRequests :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
-WHERE friend_id = $1 AND status = 'pending' AND is_deleted = FALSE
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    friend_id = $1
+    AND is_pending = TRUE
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -139,9 +469,12 @@ func (q *Queries) GetPendingFriendRequests(ctx context.Context, friendID int32) 
 			&i.ID,
 			&i.UserID,
 			&i.FriendID,
-			&i.Status,
 			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
 			&i.IsFavorite,
+			&i.IsMuted,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -157,8 +490,13 @@ func (q *Queries) GetPendingFriendRequests(ctx context.Context, friendID int32) 
 }
 
 const getSentFriendRequests = `-- name: GetSentFriendRequests :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
-WHERE user_id = $1 AND status = 'pending' AND is_deleted = FALSE
+SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+FROM friends
+WHERE
+    user_id = $1
+    AND is_pending = TRUE
+    AND is_accepted = FALSE
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -175,9 +513,12 @@ func (q *Queries) GetSentFriendRequests(ctx context.Context, userID int32) ([]Fr
 			&i.ID,
 			&i.UserID,
 			&i.FriendID,
-			&i.Status,
 			&i.AliasName,
+			&i.IsPending,
+			&i.IsAccepted,
+			&i.IsBlocked,
 			&i.IsFavorite,
+			&i.IsMuted,
 			&i.IsDeleted,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -192,45 +533,18 @@ func (q *Queries) GetSentFriendRequests(ctx context.Context, userID int32) ([]Fr
 	return items, nil
 }
 
-const getUserFriends = `-- name: GetUserFriends :many
-SELECT id, user_id, friend_id, status, alias_name, is_favorite, is_deleted, created_at, updated_at FROM friends
-WHERE user_id = $1 AND status = 'accepted' AND is_deleted = FALSE
-ORDER BY created_at DESC
-`
-
-func (q *Queries) GetUserFriends(ctx context.Context, userID int32) ([]Friend, error) {
-	rows, err := q.db.Query(ctx, getUserFriends, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Friend
-	for rows.Next() {
-		var i Friend
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.FriendID,
-			&i.Status,
-			&i.AliasName,
-			&i.IsFavorite,
-			&i.IsDeleted,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const hardDeleteFriendship = `-- name: HardDeleteFriendship :exec
+const hardDeleteFriendship = `-- name: HardDeleteFriendship :one
 DELETE FROM friends
-WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+WHERE (
+        user_id = $1
+        AND friend_id = $2
+    )
+    OR (
+        user_id = $2
+        AND friend_id = $1
+    )
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
 type HardDeleteFriendshipParams struct {
@@ -238,15 +552,76 @@ type HardDeleteFriendshipParams struct {
 	FriendID int32 `json:"friend_id"`
 }
 
-func (q *Queries) HardDeleteFriendship(ctx context.Context, arg HardDeleteFriendshipParams) error {
-	_, err := q.db.Exec(ctx, hardDeleteFriendship, arg.UserID, arg.FriendID)
-	return err
+func (q *Queries) HardDeleteFriendship(ctx context.Context, arg HardDeleteFriendshipParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, hardDeleteFriendship, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const restoreFriendship = `-- name: RestoreFriendship :exec
+const rejectFriendRequest = `-- name: RejectFriendRequest :one
 UPDATE friends
-SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2
+SET
+    is_pending = FALSE,
+    is_accepted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_pending = TRUE
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type RejectFriendRequestParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) RejectFriendRequest(ctx context.Context, arg RejectFriendRequestParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, rejectFriendRequest, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const restoreFriendship = `-- name: RestoreFriendship :one
+UPDATE friends
+SET
+    is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
 type RestoreFriendshipParams struct {
@@ -254,15 +629,119 @@ type RestoreFriendshipParams struct {
 	FriendID int32 `json:"friend_id"`
 }
 
-func (q *Queries) RestoreFriendship(ctx context.Context, arg RestoreFriendshipParams) error {
-	_, err := q.db.Exec(ctx, restoreFriendship, arg.UserID, arg.FriendID)
-	return err
+func (q *Queries) RestoreFriendship(ctx context.Context, arg RestoreFriendshipParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, restoreFriendship, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const softDeleteFriendship = `-- name: SoftDeleteFriendship :exec
+const setFavoriteFlag = `-- name: SetFavoriteFlag :one
 UPDATE friends
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
+SET
+    is_favorite = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type SetFavoriteFlagParams struct {
+	UserID     int32       `json:"user_id"`
+	FriendID   int32       `json:"friend_id"`
+	IsFavorite pgtype.Bool `json:"is_favorite"`
+}
+
+func (q *Queries) SetFavoriteFlag(ctx context.Context, arg SetFavoriteFlagParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, setFavoriteFlag, arg.UserID, arg.FriendID, arg.IsFavorite)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setMutedFlag = `-- name: SetMutedFlag :one
+UPDATE friends
+SET
+    is_muted = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type SetMutedFlagParams struct {
+	UserID   int32       `json:"user_id"`
+	FriendID int32       `json:"friend_id"`
+	IsMuted  pgtype.Bool `json:"is_muted"`
+}
+
+func (q *Queries) SetMutedFlag(ctx context.Context, arg SetMutedFlagParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, setMutedFlag, arg.UserID, arg.FriendID, arg.IsMuted)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const softDeleteFriendship = `-- name: SoftDeleteFriendship :one
+UPDATE friends
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE (
+        user_id = $1
+        AND friend_id = $2
+    )
+    OR (
+        user_id = $2
+        AND friend_id = $1
+    )
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
 type SoftDeleteFriendshipParams struct {
@@ -270,32 +749,153 @@ type SoftDeleteFriendshipParams struct {
 	FriendID int32 `json:"friend_id"`
 }
 
-func (q *Queries) SoftDeleteFriendship(ctx context.Context, arg SoftDeleteFriendshipParams) error {
-	_, err := q.db.Exec(ctx, softDeleteFriendship, arg.UserID, arg.FriendID)
-	return err
+func (q *Queries) SoftDeleteFriendship(ctx context.Context, arg SoftDeleteFriendshipParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, softDeleteFriendship, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const toggleFavorite = `-- name: ToggleFavorite :exec
+const toggleFavoriteFlag = `-- name: ToggleFavoriteFlag :one
 UPDATE friends
-SET is_favorite = $3, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
+SET
+    is_favorite = NOT is_favorite,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
-type ToggleFavoriteParams struct {
-	UserID     int32       `json:"user_id"`
-	FriendID   int32       `json:"friend_id"`
-	IsFavorite pgtype.Bool `json:"is_favorite"`
+type ToggleFavoriteFlagParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
 }
 
-func (q *Queries) ToggleFavorite(ctx context.Context, arg ToggleFavoriteParams) error {
-	_, err := q.db.Exec(ctx, toggleFavorite, arg.UserID, arg.FriendID, arg.IsFavorite)
-	return err
+func (q *Queries) ToggleFavoriteFlag(ctx context.Context, arg ToggleFavoriteFlagParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, toggleFavoriteFlag, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const updateFriendAlias = `-- name: UpdateFriendAlias :exec
+const toggleMutedFlag = `-- name: ToggleMutedFlag :one
 UPDATE friends
-SET alias_name = $3, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
+SET
+    is_muted = NOT is_muted,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type ToggleMutedFlagParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) ToggleMutedFlag(ctx context.Context, arg ToggleMutedFlagParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, toggleMutedFlag, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const unblockUser = `-- name: UnblockUser :one
+UPDATE friends
+SET
+    is_blocked = FALSE,
+    is_muted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_blocked = TRUE
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
+`
+
+type UnblockUserParams struct {
+	UserID   int32 `json:"user_id"`
+	FriendID int32 `json:"friend_id"`
+}
+
+func (q *Queries) UnblockUser(ctx context.Context, arg UnblockUserParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, unblockUser, arg.UserID, arg.FriendID)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateFriendAlias = `-- name: UpdateFriendAlias :one
+UPDATE friends
+SET
+    alias_name = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $1
+    AND friend_id = $2
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
 type UpdateFriendAliasParams struct {
@@ -304,24 +904,80 @@ type UpdateFriendAliasParams struct {
 	AliasName pgtype.Text `json:"alias_name"`
 }
 
-func (q *Queries) UpdateFriendAlias(ctx context.Context, arg UpdateFriendAliasParams) error {
-	_, err := q.db.Exec(ctx, updateFriendAlias, arg.UserID, arg.FriendID, arg.AliasName)
-	return err
+func (q *Queries) UpdateFriendAlias(ctx context.Context, arg UpdateFriendAliasParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, updateFriendAlias, arg.UserID, arg.FriendID, arg.AliasName)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const updateFriendStatus = `-- name: UpdateFriendStatus :exec
+const updateFriendFlags = `-- name: UpdateFriendFlags :one
 UPDATE friends
-SET status = $3, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1 AND friend_id = $2 AND is_deleted = FALSE
+SET
+    is_favorite = COALESCE(
+        $1,
+        is_favorite
+    ),
+    is_muted = COALESCE(
+        $2,
+        is_muted
+    ),
+    alias_name = COALESCE(
+        $3,
+        alias_name
+    ),
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    user_id = $4
+    AND friend_id = $5
+    AND is_deleted = FALSE
+RETURNING
+    id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 `
 
-type UpdateFriendStatusParams struct {
-	UserID   int32  `json:"user_id"`
-	FriendID int32  `json:"friend_id"`
-	Status   string `json:"status"`
+type UpdateFriendFlagsParams struct {
+	IsFavorite pgtype.Bool `json:"is_favorite"`
+	IsMuted    pgtype.Bool `json:"is_muted"`
+	AliasName  pgtype.Text `json:"alias_name"`
+	UserID     int32       `json:"user_id"`
+	FriendID   int32       `json:"friend_id"`
 }
 
-func (q *Queries) UpdateFriendStatus(ctx context.Context, arg UpdateFriendStatusParams) error {
-	_, err := q.db.Exec(ctx, updateFriendStatus, arg.UserID, arg.FriendID, arg.Status)
-	return err
+func (q *Queries) UpdateFriendFlags(ctx context.Context, arg UpdateFriendFlagsParams) (Friend, error) {
+	row := q.db.QueryRow(ctx, updateFriendFlags,
+		arg.IsFavorite,
+		arg.IsMuted,
+		arg.AliasName,
+		arg.UserID,
+		arg.FriendID,
+	)
+	var i Friend
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FriendID,
+		&i.AliasName,
+		&i.IsPending,
+		&i.IsAccepted,
+		&i.IsBlocked,
+		&i.IsFavorite,
+		&i.IsMuted,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

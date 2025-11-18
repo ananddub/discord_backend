@@ -9,7 +9,7 @@ import (
 func ConvertMessageToProto(message repo.Message) *schema.Message {
 	pbMessage := &schema.Message{
 		Id:        message.ID,
-		ChannelId: message.ChannelID,
+		ChannelId: message.ChannelID.Int32,
 		SenderId:  message.SenderID,
 		Content:   message.Content,
 		IsEdited:  message.IsEdited.Bool,

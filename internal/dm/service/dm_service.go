@@ -3,259 +3,186 @@ package service
 import (
 	"context"
 	"errors"
-	"time"
 
+	"discord/config"
+	"discord/gen/repo"
 	commonErrors "discord/internal/common/errors"
-	dmRepo "discord/internal/dm/repository"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	messageRepo "discord/internal/message/repository"
+	"discord/pkg/pubsub"
 )
 
-type DMService struct {
-	dmRepo *dmRepo.DMRepository
+type MessageService struct {
+	messageRepo *messageRepo.MessageRepository
+	pubsub      *pubsub.PubSub
 }
 
-func NewDMService(dmRepo *dmRepo.DMRepository) *DMService {
-	return &DMService{
-		dmRepo: dmRepo,
+func NewMessageService() *MessageService {
+	db := config.GetWriteDb()
+	return &MessageService{
+		messageRepo: messageRepo.NewMessageRepository(db),
+		pubsub:      pubsub.Get(),
 	}
 }
 
-// DMChannelInfo represents DM channel information for response
-type DMChannelInfo struct {
-	ID             int32
-	ParticipantIDs []int32
-	Name           string
-	Icon           string
-	LastMessageID  int32
-	LastMessageAt  int64
-	UnreadCount    int32
-	IsGroup        bool
-}
-
-// CreateDMChannel creates a 1-on-1 DM channel between two users
-func (s *DMService) CreateDMChannel(ctx context.Context, userID, recipientID int32) (int32, error) {
-	// Check if DM channel already exists between these users
-	existingChannel, err := s.dmRepo.GetDMChannelForUsers(ctx, userID, recipientID)
-	if err == nil && existingChannel != nil {
-		return existingChannel.ID, nil
+func (s *MessageService) SendMessage(ctx context.Context, reciver_id, senderID int32, content string, replyToMessageID *int32, mentionEveryone bool) (repo.Message, error) {
+	if content == "" {
+		return repo.Message{}, commonErrors.ErrInvalidInput
 	}
 
-	// Create new DM channel
-	channel, err := s.dmRepo.CreateDMChannel(ctx, "", "", nil, false)
-	if err != nil {
-		return 0, err
-	}
-
-	// Add both users as participants
-	_, err = s.dmRepo.AddDMParticipant(ctx, channel.ID, userID)
-	if err != nil {
-		s.dmRepo.DeleteDMChannel(ctx, channel.ID)
-		return 0, err
-	}
-
-	_, err = s.dmRepo.AddDMParticipant(ctx, channel.ID, recipientID)
-	if err != nil {
-		s.dmRepo.DeleteDMChannel(ctx, channel.ID)
-		return 0, err
-	}
-
-	return channel.ID, nil
-}
-
-// CreateGroupDM creates a group DM channel
-func (s *DMService) CreateGroupDM(ctx context.Context, ownerID int32, userIDs []int32, name string) (int32, error) {
-	if len(userIDs) < 2 {
-		return 0, errors.New("group DM requires at least 2 users")
-	}
-
-	// Create group DM channel
-	channel, err := s.dmRepo.CreateDMChannel(ctx, name, "", &ownerID, true)
-	if err != nil {
-		return 0, err
-	}
-
-	// Add owner as participant
-	_, err = s.dmRepo.AddDMParticipant(ctx, channel.ID, ownerID)
-	if err != nil {
-		s.dmRepo.DeleteDMChannel(ctx, channel.ID)
-		return 0, err
-	}
-
-	// Add all users as participants
-	for _, userID := range userIDs {
-		if userID == ownerID {
-			continue // Skip owner, already added
-		}
-		_, err = s.dmRepo.AddDMParticipant(ctx, channel.ID, userID)
+	if replyToMessageID != nil {
+		_, err := s.messageRepo.GetMessageByID(ctx, *replyToMessageID)
 		if err != nil {
-			// Continue adding others even if one fails
-			continue
+			return repo.Message{}, errors.New("reply message not found")
 		}
 	}
 
-	return channel.ID, nil
+	return s.messageRepo.CreateMessage(ctx, reciver_id, senderID, content, "TEXT", replyToMessageID, mentionEveryone)
 }
 
-// GetDMChannel retrieves DM channel with participants
-func (s *DMService) GetDMChannel(ctx context.Context, dmChannelID int32) (*DMChannelInfo, error) {
-	channel, err := s.dmRepo.GetDMChannelByID(ctx, dmChannelID)
+func (s *MessageService) GetMessage(ctx context.Context, messageID int32) (repo.Message, error) {
+	return s.messageRepo.GetMessageByID(ctx, messageID)
+}
+
+func (s *MessageService) GetMessages(ctx context.Context, receiver_id int32, limit, offset int32, beforeMessageID, afterMessageID *int32) ([]repo.Message, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	if beforeMessageID != nil {
+		return s.messageRepo.GetMessagesBefore(ctx, receiver_id, *beforeMessageID, limit)
+	}
+
+	if afterMessageID != nil {
+		return s.messageRepo.GetMessagesAfter(ctx, receiver_id, *afterMessageID, limit)
+	}
+
+	return s.messageRepo.GetChannelMessages(ctx, receiver_id, limit, offset)
+}
+
+func (s *MessageService) EditMessage(ctx context.Context, messageID, userID int32, content string) (repo.Message, error) {
+	if content == "" {
+		return repo.Message{}, commonErrors.ErrInvalidInput
+	}
+
+	message, err := s.messageRepo.GetMessageByID(ctx, messageID)
 	if err != nil {
-		return nil, commonErrors.ErrNotFound
+		return repo.Message{}, commonErrors.ErrNotFound
 	}
 
-	participants, err := s.dmRepo.GetDMParticipants(ctx, dmChannelID)
-	if err != nil {
-		return nil, err
+	if message.SenderID != userID {
+		return repo.Message{}, commonErrors.ErrPermissionDenied
 	}
 
-	participantIDs := make([]int32, len(participants))
-	for i, p := range participants {
-		participantIDs[i] = p.UserID
-	}
-
-	info := &DMChannelInfo{
-		ID:             channel.ID,
-		ParticipantIDs: participantIDs,
-	}
-
-	if channel.Name.Valid {
-		info.Name = channel.Name.String
-	}
-
-	if channel.Icon.Valid {
-		info.Icon = channel.Icon.String
-	}
-
-	if channel.LastMessageID.Valid {
-		info.LastMessageID = channel.LastMessageID.Int32
-	}
-
-	if channel.LastMessageAt.Valid {
-		info.LastMessageAt = channel.LastMessageAt.Time.Unix()
-	}
-
-	if channel.IsGroup.Valid {
-		info.IsGroup = channel.IsGroup.Bool
-	}
-
-	return info, nil
+	return s.messageRepo.UpdateMessage(ctx, messageID, content)
 }
 
-// GetUserDMChannels retrieves all DM channels for a user
-func (s *DMService) GetUserDMChannels(ctx context.Context, userID int32) ([]*DMChannelInfo, error) {
-	channels, err := s.dmRepo.GetUserDMChannels(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
+func (s *MessageService) DeleteMessage(ctx context.Context, messageID, userID int32) error {
 
-	result := make([]*DMChannelInfo, len(channels))
-	for i, channel := range channels {
-		participants, err := s.dmRepo.GetDMParticipants(ctx, channel.ID)
-		if err != nil {
-			continue
-		}
-
-		participantIDs := make([]int32, len(participants))
-		for j, p := range participants {
-			participantIDs[j] = p.UserID
-		}
-
-		info := &DMChannelInfo{
-			ID:             channel.ID,
-			ParticipantIDs: participantIDs,
-		}
-
-		if channel.Name.Valid {
-			info.Name = channel.Name.String
-		}
-
-		if channel.Icon.Valid {
-			info.Icon = channel.Icon.String
-		}
-
-		if channel.LastMessageID.Valid {
-			info.LastMessageID = channel.LastMessageID.Int32
-		}
-
-		if channel.LastMessageAt.Valid {
-			info.LastMessageAt = channel.LastMessageAt.Time.Unix()
-		}
-
-		if channel.IsGroup.Valid {
-			info.IsGroup = channel.IsGroup.Bool
-		}
-
-		result[i] = info
-	}
-
-	return result, nil
-}
-
-// CloseDMChannel closes (deletes) a DM channel for a user
-func (s *DMService) CloseDMChannel(ctx context.Context, dmChannelID, userID int32) error {
-	// Remove user as participant
-	return s.dmRepo.RemoveDMParticipant(ctx, dmChannelID, userID)
-}
-
-// AddUserToGroupDM adds a user to a group DM
-func (s *DMService) AddUserToGroupDM(ctx context.Context, dmChannelID, userID int32) error {
-	// Verify it's a group DM
-	channel, err := s.dmRepo.GetDMChannelByID(ctx, dmChannelID)
+	message, err := s.messageRepo.GetMessageByID(ctx, messageID)
 	if err != nil {
 		return commonErrors.ErrNotFound
 	}
 
-	if !channel.IsGroup.Valid || !channel.IsGroup.Bool {
-		return errors.New("not a group DM")
+	if message.SenderID != userID {
+		return commonErrors.ErrPermissionDenied
 	}
 
-	// Add participant
-	_, err = s.dmRepo.AddDMParticipant(ctx, dmChannelID, userID)
-	return err
+	_ = s.messageRepo.DeleteMessageAttachments(ctx, messageID)
+
+	_ = s.messageRepo.DeleteAllReactions(ctx, messageID)
+
+	return s.messageRepo.DeleteMessage(ctx, messageID)
 }
 
-// RemoveUserFromGroupDM removes a user from a group DM
-func (s *DMService) RemoveUserFromGroupDM(ctx context.Context, dmChannelID, userID int32) error {
-	// Verify it's a group DM
-	channel, err := s.dmRepo.GetDMChannelByID(ctx, dmChannelID)
+func (s *MessageService) PinMessage(ctx context.Context, messageID int32) error {
+
+	_, err := s.messageRepo.GetMessageByID(ctx, messageID)
 	if err != nil {
 		return commonErrors.ErrNotFound
 	}
 
-	if !channel.IsGroup.Valid || !channel.IsGroup.Bool {
-		return errors.New("not a group DM")
-	}
-
-	// Remove participant
-	return s.dmRepo.RemoveDMParticipant(ctx, dmChannelID, userID)
+	return s.messageRepo.PinMessage(ctx, messageID)
 }
 
-// UpdateGroupDM updates group DM information
-func (s *DMService) UpdateGroupDM(ctx context.Context, dmChannelID int32, name, icon *string) error {
-	// Verify it's a group DM
-	channel, err := s.dmRepo.GetDMChannelByID(ctx, dmChannelID)
+func (s *MessageService) UnpinMessage(ctx context.Context, messageID int32) error {
+	return s.messageRepo.UnpinMessage(ctx, messageID)
+}
+
+func (s *MessageService) GetPinnedMessages(ctx context.Context, channelID int32) ([]repo.Message, error) {
+	return s.messageRepo.GetPinnedMessages(ctx, channelID)
+}
+
+func (s *MessageService) AddReaction(ctx context.Context, messageID, userID int32, emoji string, emojiID *string) error {
+
+	_, err := s.messageRepo.GetMessageByID(ctx, messageID)
 	if err != nil {
 		return commonErrors.ErrNotFound
 	}
 
-	if !channel.IsGroup.Valid || !channel.IsGroup.Bool {
-		return errors.New("not a group DM")
+	reactions, err := s.messageRepo.GetReactionsByEmoji(ctx, messageID, emoji)
+	if err == nil {
+		for _, reaction := range reactions {
+			if reaction.UserID == userID {
+				return errors.New("already reacted with this emoji")
+			}
+		}
 	}
 
-	// Update channel
-	_, err = s.dmRepo.UpdateDMChannel(ctx, dmChannelID, name, icon, nil, nil)
+	_, err = s.messageRepo.CreateReaction(ctx, messageID, userID, emoji, emojiID)
 	return err
 }
 
-// MarkAsRead marks messages as read for a user
-func (s *DMService) MarkAsRead(ctx context.Context, dmChannelID, userID, messageID int32) error {
-	return s.dmRepo.UpdateLastReadMessage(ctx, dmChannelID, userID, messageID)
+func (s *MessageService) RemoveReaction(ctx context.Context, messageID, userID int32, emoji string) error {
+	return s.messageRepo.DeleteReaction(ctx, messageID, userID, emoji)
 }
 
-// UpdateLastMessage updates the last message info for a DM channel
-func (s *DMService) UpdateLastMessage(ctx context.Context, dmChannelID, messageID int32) error {
-	now := pgtype.Timestamp{Time: time.Now(), Valid: true}
-	_, err := s.dmRepo.UpdateDMChannel(ctx, dmChannelID, nil, nil, &messageID, &now)
-	return err
+func (s *MessageService) GetReactions(ctx context.Context, messageID int32, emoji *string) ([]repo.MessageReaction, error) {
+	if emoji != nil {
+		return s.messageRepo.GetReactionsByEmoji(ctx, messageID, *emoji)
+	}
+	return s.messageRepo.GetMessageReactions(ctx, messageID)
+}
+
+func (s *MessageService) BulkDeleteMessages(ctx context.Context, messageIDs []int32) error {
+	if len(messageIDs) == 0 {
+		return commonErrors.ErrInvalidInput
+	}
+
+	if len(messageIDs) > 100 {
+		return errors.New("cannot delete more than 100 messages at once")
+	}
+
+	return s.messageRepo.BulkDeleteMessages(ctx, messageIDs)
+}
+
+func (s *MessageService) SearchMessages(ctx context.Context, channelID int32, query string, limit, offset int32) ([]repo.Message, error) {
+	if query == "" {
+		return nil, commonErrors.ErrInvalidInput
+	}
+
+	if limit <= 0 {
+		limit = 25
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	return s.messageRepo.SearchMessages(ctx, channelID, query, limit, offset)
+}
+
+func (s *MessageService) CreateAttachment(ctx context.Context, messageID int32, fileURL, fileName, fileType string, fileSize int64, width, height *int32) (repo.MessageAttachment, error) {
+
+	_, err := s.messageRepo.GetMessageByID(ctx, messageID)
+	if err != nil {
+		return repo.MessageAttachment{}, commonErrors.ErrNotFound
+	}
+
+	return s.messageRepo.CreateAttachment(ctx, messageID, fileURL, fileName, fileType, fileSize, width, height)
+}
+
+func (s *MessageService) GetMessageAttachments(ctx context.Context, messageID int32) ([]repo.MessageAttachment, error) {
+	return s.messageRepo.GetMessageAttachments(ctx, messageID)
 }

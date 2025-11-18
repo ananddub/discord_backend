@@ -12,11 +12,19 @@ import (
 )
 
 const createMessageAttachment = `-- name: CreateMessageAttachment :one
-INSERT INTO message_attachments (
-    message_id, file_url, file_name, file_type, file_size, width, height
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
-) RETURNING id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
+INSERT INTO
+    message_attachments (
+        message_id,
+        file_url,
+        file_name,
+        file_type,
+        file_size,
+        width,
+        height
+    )
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING
+    id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
 type CreateMessageAttachmentParams struct {
@@ -56,8 +64,11 @@ func (q *Queries) CreateMessageAttachment(ctx context.Context, arg CreateMessage
 }
 
 const getMessageAttachments = `-- name: GetMessageAttachments :many
-SELECT id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at FROM message_attachments
-WHERE message_id = $1 AND is_deleted = FALSE
+SELECT id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
+FROM message_attachments
+WHERE
+    message_id = $1
+    AND is_deleted = FALSE
 `
 
 func (q *Queries) GetMessageAttachments(ctx context.Context, messageID int32) ([]MessageAttachment, error) {
@@ -91,55 +102,133 @@ func (q *Queries) GetMessageAttachments(ctx context.Context, messageID int32) ([
 	return items, nil
 }
 
-const hardDeleteMessageAttachment = `-- name: HardDeleteMessageAttachment :exec
-DELETE FROM message_attachments
-WHERE id = $1
+const hardDeleteMessageAttachment = `-- name: HardDeleteMessageAttachment :one
+DELETE FROM message_attachments WHERE id = $1 RETURNING id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
-func (q *Queries) HardDeleteMessageAttachment(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, hardDeleteMessageAttachment, id)
-	return err
+func (q *Queries) HardDeleteMessageAttachment(ctx context.Context, id int32) (MessageAttachment, error) {
+	row := q.db.QueryRow(ctx, hardDeleteMessageAttachment, id)
+	var i MessageAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.FileUrl,
+		&i.FileName,
+		&i.FileType,
+		&i.FileSize,
+		&i.Width,
+		&i.Height,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const hardDeleteMessageAttachments = `-- name: HardDeleteMessageAttachments :exec
-DELETE FROM message_attachments
-WHERE message_id = $1
+const hardDeleteMessageAttachments = `-- name: HardDeleteMessageAttachments :one
+DELETE FROM message_attachments WHERE message_id = $1 RETURNING id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
-func (q *Queries) HardDeleteMessageAttachments(ctx context.Context, messageID int32) error {
-	_, err := q.db.Exec(ctx, hardDeleteMessageAttachments, messageID)
-	return err
+func (q *Queries) HardDeleteMessageAttachments(ctx context.Context, messageID int32) (MessageAttachment, error) {
+	row := q.db.QueryRow(ctx, hardDeleteMessageAttachments, messageID)
+	var i MessageAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.FileUrl,
+		&i.FileName,
+		&i.FileType,
+		&i.FileSize,
+		&i.Width,
+		&i.Height,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const restoreMessageAttachment = `-- name: RestoreMessageAttachment :exec
+const restoreMessageAttachment = `-- name: RestoreMessageAttachment :one
 UPDATE message_attachments
-SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+SET
+    is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
-func (q *Queries) RestoreMessageAttachment(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, restoreMessageAttachment, id)
-	return err
+func (q *Queries) RestoreMessageAttachment(ctx context.Context, id int32) (MessageAttachment, error) {
+	row := q.db.QueryRow(ctx, restoreMessageAttachment, id)
+	var i MessageAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.FileUrl,
+		&i.FileName,
+		&i.FileType,
+		&i.FileSize,
+		&i.Width,
+		&i.Height,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const softDeleteMessageAttachment = `-- name: SoftDeleteMessageAttachment :exec
+const softDeleteMessageAttachment = `-- name: SoftDeleteMessageAttachment :one
 UPDATE message_attachments
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
-func (q *Queries) SoftDeleteMessageAttachment(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, softDeleteMessageAttachment, id)
-	return err
+func (q *Queries) SoftDeleteMessageAttachment(ctx context.Context, id int32) (MessageAttachment, error) {
+	row := q.db.QueryRow(ctx, softDeleteMessageAttachment, id)
+	var i MessageAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.FileUrl,
+		&i.FileName,
+		&i.FileType,
+		&i.FileSize,
+		&i.Width,
+		&i.Height,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const softDeleteMessageAttachments = `-- name: SoftDeleteMessageAttachments :exec
+const softDeleteMessageAttachments = `-- name: SoftDeleteMessageAttachments :one
 UPDATE message_attachments
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE message_id = $1
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    message_id = $1
+RETURNING
+    id, message_id, file_url, file_name, file_type, file_size, width, height, is_deleted, created_at
 `
 
-func (q *Queries) SoftDeleteMessageAttachments(ctx context.Context, messageID int32) error {
-	_, err := q.db.Exec(ctx, softDeleteMessageAttachments, messageID)
-	return err
+func (q *Queries) SoftDeleteMessageAttachments(ctx context.Context, messageID int32) (MessageAttachment, error) {
+	row := q.db.QueryRow(ctx, softDeleteMessageAttachments, messageID)
+	var i MessageAttachment
+	err := row.Scan(
+		&i.ID,
+		&i.MessageID,
+		&i.FileUrl,
+		&i.FileName,
+		&i.FileType,
+		&i.FileSize,
+		&i.Width,
+		&i.Height,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }

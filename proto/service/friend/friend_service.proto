@@ -9,49 +9,35 @@ service FriendService {
   rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
   rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
   rpc RejectFriendRequest(RejectFriendRequestRequest) returns (RejectFriendRequestResponse);
-  rpc BlockFriend(BlockRequest) returns (BlockResponse);
-  rpc UnblockFriend(UnblockRequest) returns (UnblockResponse);
-  rpc UpdateAliasName(UpdateAliasNameRequest) returns (UpdateAliasNameResponse);
-  rpc ListFreinds(GetFriendsRequest) returns (stream GetFriendsResponse);
-}
+  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse);
 
-message UpdateAliasNameRequest {
-  int32 user_id = 1 ;
-  int32 friend_id = 2 ;
-  string alias_name = 3 ;
-}
+  // Friend Lists
+  rpc GetFriends(GetFriendsRequest) returns (GetFriendsResponse);
+  rpc GetPendingRequests(GetPendingRequestsRequest) returns (GetPendingRequestsResponse);
+  rpc GetBlockedUsers(GetBlockedUsersRequest) returns (GetBlockedUsersResponse);
 
-message UpdateAliasNameResponse {
-  bool success = 1;
-}
+  // Friend Search
+  rpc SearchFriends(SearchFriendsRequest) returns (SearchFriendsResponse);
+
+  // Streaming - Real-time friend updates
+  rpc StreamFriendUpdates(StreamFriendUpdatesRequest) returns (stream protoschema.Friend);
 
 
-message BlockRequest {
-  int32 user_id = 1 ;
-  int32 friend_id = 2 ;
-}
-message BlockResponse {
-  bool success = 1;
-}
-message UnblockRequest {
-  int32 user_id = 1 ;
-  int32 friend_id = 2 ;
-}
-message UnblockResponse {
-  bool success = 1;
 }
 
 message SendFriendRequestRequest {
-  int32 user_id = 1 ;
-  int32 friend_id = 2 ;
+  int32 user_id = 1;
+  int32 friend_id = 2;
 }
 
 message SendFriendRequestResponse {
   bool success = 1;
+  string message = 2;
 }
 
 message AcceptFriendRequestRequest {
-  int32 friend_request_id = 1 ;
+  int32 user_id = 1;
+  int32 requester_id = 2;
 }
 
 message AcceptFriendRequestResponse {
@@ -59,17 +45,57 @@ message AcceptFriendRequestResponse {
 }
 
 message RejectFriendRequestRequest {
-  int32 friend_request_id = 1 ;
+  int32 user_id = 1;
+  int32 requester_id = 2;
 }
 
 message RejectFriendRequestResponse {
   bool success = 1;
 }
 
+message RemoveFriendRequest {
+  int32 user_id = 1;
+  int32 friend_id = 2;
+}
+
+message RemoveFriendResponse {
+  bool success = 1;
+}
+
 message GetFriendsRequest {
-  int32 user_id = 1 ;
+  int32 user_id = 1;
 }
 
 message GetFriendsResponse {
   repeated protoschema.Friend friends = 1;
+}
+
+message GetPendingRequestsRequest {
+  int32 user_id = 1;
+}
+
+message GetPendingRequestsResponse {
+  repeated protoschema.Friend pending_requests = 1;
+}
+
+message GetBlockedUsersRequest {
+  int32 user_id = 1;
+}
+
+message GetBlockedUsersResponse {
+  repeated protoschema.Friend blocked_users = 1;
+}
+
+message SearchFriendsRequest {
+  int32 user_id = 1;
+  string query = 2;
+}
+
+message SearchFriendsResponse {
+  repeated protoschema.Friend friends = 1;
+}
+
+// Streaming
+message StreamFriendUpdatesRequest {
+  int32 user_id = 1;
 }

@@ -23,7 +23,6 @@ func NewUserController(userService *userService.UserService) *userPb.UserService
 	return &grpcController
 }
 
-// GetUser retrieves user information
 func (c *UserController) GetUser(ctx context.Context, req *userPb.GetUserRequest) (*userPb.GetUserResponse, error) {
 	if req.GetUserId() == 0 {
 		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
@@ -41,7 +40,6 @@ func (c *UserController) GetUser(ctx context.Context, req *userPb.GetUserRequest
 		Status:   user.Status,
 	}
 
-	// All optional string fields
 	if user.FullName.Valid {
 		pbUser.FullName = user.FullName.String
 	}
@@ -64,7 +62,6 @@ func (c *UserController) GetUser(ctx context.Context, req *userPb.GetUserRequest
 		pbUser.CustomStatus = user.CustomStatus.String
 	}
 
-	// Boolean fields
 	if user.IsBot.Valid {
 		pbUser.IsBot = user.IsBot.Bool
 	}
@@ -72,7 +69,6 @@ func (c *UserController) GetUser(ctx context.Context, req *userPb.GetUserRequest
 		pbUser.IsVerified = user.IsVerified.Bool
 	}
 
-	// Timestamps
 	if user.CreatedAt.Valid {
 		pbUser.CreatedAt = user.CreatedAt.Time.Unix()
 	}
@@ -86,9 +82,8 @@ func (c *UserController) GetUser(ctx context.Context, req *userPb.GetUserRequest
 	}, nil
 }
 
-// UpdateUser updates user profile information
 func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserRequest) (*userPb.UpdateUserResponse, error) {
-	// Get user ID from context
+
 	userID := ctx.Value("user_id").(int32)
 
 	if req.GetUser() == nil {
@@ -138,7 +133,6 @@ func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserR
 		Status:   user.Status,
 	}
 
-	// All optional string fields
 	if user.FullName.Valid {
 		pbUser.FullName = user.FullName.String
 	}
@@ -161,7 +155,6 @@ func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserR
 		pbUser.CustomStatus = user.CustomStatus.String
 	}
 
-	// Boolean fields
 	if user.IsBot.Valid {
 		pbUser.IsBot = user.IsBot.Bool
 	}
@@ -169,7 +162,6 @@ func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserR
 		pbUser.IsVerified = user.IsVerified.Bool
 	}
 
-	// Timestamps
 	if user.CreatedAt.Valid {
 		pbUser.CreatedAt = user.CreatedAt.Time.Unix()
 	}
@@ -183,7 +175,6 @@ func (c *UserController) UpdateUser(ctx context.Context, req *userPb.UpdateUserR
 	}, nil
 }
 
-// GetUserProfile retrieves detailed user profile
 func (c *UserController) GetUserProfile(ctx context.Context, req *userPb.GetUserProfileRequest) (*userPb.GetUserProfileResponse, error) {
 	if req.GetUserId() == 0 {
 		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
@@ -201,7 +192,6 @@ func (c *UserController) GetUserProfile(ctx context.Context, req *userPb.GetUser
 		Status:   user.Status,
 	}
 
-	// All optional string fields
 	if user.FullName.Valid {
 		pbUser.FullName = user.FullName.String
 	}
@@ -224,7 +214,6 @@ func (c *UserController) GetUserProfile(ctx context.Context, req *userPb.GetUser
 		pbUser.CustomStatus = user.CustomStatus.String
 	}
 
-	// Boolean fields
 	if user.IsBot.Valid {
 		pbUser.IsBot = user.IsBot.Bool
 	}
@@ -232,7 +221,6 @@ func (c *UserController) GetUserProfile(ctx context.Context, req *userPb.GetUser
 		pbUser.IsVerified = user.IsVerified.Bool
 	}
 
-	// Timestamps
 	if user.CreatedAt.Valid {
 		pbUser.CreatedAt = user.CreatedAt.Time.Unix()
 	}
@@ -245,7 +233,6 @@ func (c *UserController) GetUserProfile(ctx context.Context, req *userPb.GetUser
 	}, nil
 }
 
-// DeleteUser deletes a user account
 func (c *UserController) DeleteUser(ctx context.Context, req *userPb.DeleteUserRequest) (*userPb.DeleteUserResponse, error) {
 	// Get user ID from context
 	userID := ctx.Value("user_id").(int32)
@@ -459,5 +446,44 @@ func (c *UserController) GetBlockedUsers(ctx context.Context, req *userPb.GetBlo
 
 	return &userPb.GetBlockedUsersResponse{
 		BlockedUserIds: blockedIDs,
+	}, nil
+}
+
+func (c *UserController) StreamUserUpdates(req *userPb.StreamUserUpdatesRequest, stream userPb.UserService_StreamUserUpdatesServer) error {
+	ch := userService.StreamUser(req.GetUserId())
+	defer ch.Close()
+	for data := range ch.Receive() {
+		user := data.(*schema.User)
+		if err := stream.Send(user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *UserController) StreamUserFriendUpdates(req *userPb.StreamUserUpdatesRequest, stream userPb.UserService_StreamUserFriendUpdatesServer) error {
+	ch := userService.StreamUserFriendUpdates(req.GetUserId())
+	defer ch.Close()
+	for data := range ch.Receive() {
+		user := data.(*schema.User)
+		if err := stream.Send(user); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *UserController) MinioGetUploadProfileUrl(ctx context.Context, req *userPb.MinioGetUploadProfileUrlRequest) (*userPb.MinioGetUploadProfileUrlResponse, error) {
+
+	userID := ctx.Value("user_id").(int32)
+
+	uploadURL, fileURL, err := c.userService.MinioGetUploadProfileUrl(ctx, userID, req.GetFilename(), req.GetFiletype())
+	if err != nil {
+		return nil, commonErrors.ToGRPCError(err)
+	}
+
+	return &userPb.MinioGetUploadProfileUrlResponse{
+		UploadUrl: uploadURL,
+		FileUrl:   fileURL,
 	}, nil
 }

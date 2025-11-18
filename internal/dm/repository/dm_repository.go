@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-
 	"discord/gen/repo"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -21,121 +20,154 @@ func NewDMRepository(db *pgxpool.Pool) *DMRepository {
 	}
 }
 
-// CreateDMChannel creates a new DM channel
-func (r *DMRepository) CreateDMChannel(ctx context.Context, name, icon string, ownerID *int32, isGroup bool) (*repo.DmChannel, error) {
-	params := repo.CreateDMChannelParams{
-		IsGroup: pgtype.Bool{Bool: isGroup, Valid: true},
+func (r *DMRepository) CreateDMMessage(ctx context.Context, receiverID, senderID int32, content, messageType string, replyToMessageID *int32, mentionEveryone bool) (repo.Message, error) {
+	var replyTo pgtype.Int4
+	if replyToMessageID != nil {
+		replyTo = pgtype.Int4{Int32: *replyToMessageID, Valid: true}
 	}
 
-	if name != "" {
-		params.Name = pgtype.Text{String: name, Valid: true}
-	}
-
-	if icon != "" {
-		params.Icon = pgtype.Text{String: icon, Valid: true}
-	}
-
-	if ownerID != nil {
-		params.OwnerID = pgtype.Int4{Int32: *ownerID, Valid: true}
-	}
-
-	channel, err := r.queries.CreateDMChannel(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return &channel, nil
-}
-
-// GetDMChannelByID retrieves DM channel by ID
-func (r *DMRepository) GetDMChannelByID(ctx context.Context, id int32) (*repo.DmChannel, error) {
-	channel, err := r.queries.GetDMChannelByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return &channel, nil
-}
-
-// GetUserDMChannels retrieves all DM channels for a user
-func (r *DMRepository) GetUserDMChannels(ctx context.Context, userID int32) ([]repo.DmChannel, error) {
-	return r.queries.GetUserDMChannels(ctx, userID)
-}
-
-// GetDMChannelForUsers retrieves existing DM channel between two users
-func (r *DMRepository) GetDMChannelForUsers(ctx context.Context, userID1, userID2 int32) (*repo.DmChannel, error) {
-	channel, err := r.queries.GetDMChannelForUsers(ctx, repo.GetDMChannelForUsersParams{
-		UserID:   userID1,
-		UserID_2: userID2,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &channel, nil
-}
-
-// UpdateDMChannel updates DM channel information
-func (r *DMRepository) UpdateDMChannel(ctx context.Context, id int32, name, icon *string, lastMessageID *int32, lastMessageAt *pgtype.Timestamp) (*repo.DmChannel, error) {
-	params := repo.UpdateDMChannelParams{
-		ID: id,
-	}
-
-	if name != nil {
-		params.Name = pgtype.Text{String: *name, Valid: true}
-	}
-
-	if icon != nil {
-		params.Icon = pgtype.Text{String: *icon, Valid: true}
-	}
-
-	if lastMessageID != nil {
-		params.LastMessageID = pgtype.Int4{Int32: *lastMessageID, Valid: true}
-	}
-
-	if lastMessageAt != nil {
-		params.LastMessageAt = *lastMessageAt
-	}
-
-	channel, err := r.queries.UpdateDMChannel(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	return &channel, nil
-}
-
-// DeleteDMChannel deletes a DM channel
-func (r *DMRepository) DeleteDMChannel(ctx context.Context, id int32) error {
-	return r.queries.SoftDeleteDMChannel(ctx, id)
-}
-
-// AddDMParticipant adds a participant to DM channel
-func (r *DMRepository) AddDMParticipant(ctx context.Context, dmChannelID, userID int32) (*repo.DmParticipant, error) {
-	participant, err := r.queries.AddDMParticipant(ctx, repo.AddDMParticipantParams{
-		DmChannelID: dmChannelID,
-		UserID:      userID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &participant, nil
-}
-
-// GetDMParticipants retrieves all participants in a DM channel
-func (r *DMRepository) GetDMParticipants(ctx context.Context, dmChannelID int32) ([]repo.DmParticipant, error) {
-	return r.queries.GetDMParticipants(ctx, dmChannelID)
-}
-
-// RemoveDMParticipant removes a participant from DM channel
-func (r *DMRepository) RemoveDMParticipant(ctx context.Context, dmChannelID, userID int32) error {
-	return r.queries.RemoveDMParticipant(ctx, repo.RemoveDMParticipantParams{
-		DmChannelID: dmChannelID,
-		UserID:      userID,
+	return r.queries.CreateChatMessage(ctx, repo.CreateChatMessageParams{
+		ReceiverID:       pgtype.Int4{Int32: receiverID, Valid: true},
+		SenderID:         senderID,
+		Content:          content,
+		MessageType:      pgtype.Text{String: messageType, Valid: true},
+		ReplyToMessageID: replyTo,
+		MentionEveryone:  pgtype.Bool{Bool: mentionEveryone, Valid: true},
 	})
 }
 
-// UpdateLastReadMessage updates the last read message for a participant
-func (r *DMRepository) UpdateLastReadMessage(ctx context.Context, dmChannelID, userID, messageID int32) error {
-	return r.queries.UpdateLastReadMessage(ctx, repo.UpdateLastReadMessageParams{
-		DmChannelID:       dmChannelID,
-		UserID:            userID,
-		LastReadMessageID: pgtype.Int4{Int32: messageID, Valid: true},
+func (r *DMRepository) GetDMMessageByID(ctx context.Context, messageID int32) (repo.Message, error) {
+	return r.queries.GetChatMessageByID(ctx, messageID)
+}
+
+func (r *DMRepository) GetDMMessages(ctx context.Context, userID1, userID2, limit, offset int32) ([]repo.Message, error) {
+	return r.queries.GetChatMessages(ctx, repo.GetChatMessagesParams{
+		SenderID:   userID1,
+		ReceiverID: pgtype.Int4{Int32: userID2, Valid: true},
+		Limit:      limit,
+		Offset:     offset,
 	})
+}
+
+func (r *DMRepository) GetDMMessagesBefore(ctx context.Context, userID1, userID2, beforeMessageID, limit int32) ([]repo.Message, error) {
+	return r.queries.GetChatMessagesBefore(ctx, repo.GetChatMessagesBeforeParams{
+		SenderID:   userID1,
+		ReceiverID: pgtype.Int4{Int32: userID2, Valid: true},
+		ID:         beforeMessageID,
+		Limit:      limit,
+	})
+}
+
+func (r *DMRepository) GetDMMessagesAfter(ctx context.Context, userID1, userID2, afterMessageID, limit int32) ([]repo.Message, error) {
+	return r.queries.GetChatMessagesAfter(ctx, repo.GetChatMessagesAfterParams{
+		SenderID:   userID1,
+		ReceiverID: pgtype.Int4{Int32: userID2, Valid: true},
+		ID:         afterMessageID,
+		Limit:      limit,
+	})
+}
+
+func (r *DMRepository) UpdateMessage(ctx context.Context, messageID int32, content string) (repo.Message, error) {
+	return r.queries.UpdateChatMessage(ctx, repo.UpdateChatMessageParams{
+		ID:      messageID,
+		Content: content,
+	})
+}
+
+func (r *DMRepository) DeleteMessage(ctx context.Context, messageID int32) error {
+	_, err := r.queries.SoftDeleteChatMessage(ctx, messageID)
+	return err
+}
+
+func (r *DMRepository) SearchDMMessages(ctx context.Context, userID1, userID2 int32, query string, limit, offset int32) ([]repo.Message, error) {
+	return r.queries.SearchChatMessages(ctx, repo.SearchChatMessagesParams{
+		SenderID:   userID1,
+		ReceiverID: pgtype.Int4{Int32: userID2, Valid: true},
+		Column3:    pgtype.Text{String: query, Valid: true},
+		Limit:      limit,
+		Offset:     offset,
+	})
+}
+
+func (r *DMRepository) PinMessage(ctx context.Context, messageID int32) error {
+	_, err := r.queries.PinMessage(ctx, messageID)
+	return err
+}
+
+func (r *DMRepository) UnpinMessage(ctx context.Context, messageID int32) error {
+	_, err := r.queries.UnpinMessage(ctx, messageID)
+	return err
+}
+
+func (r *DMRepository) CreateReaction(ctx context.Context, messageID, userID int32, emoji string, emojiID *string) (repo.MessageReaction, error) {
+	var emojiIDType pgtype.Text
+	if emojiID != nil {
+		emojiIDType = pgtype.Text{String: *emojiID, Valid: true}
+	}
+
+	return r.queries.CreateReaction(ctx, repo.CreateReactionParams{
+		MessageID: messageID,
+		UserID:    userID,
+		Emoji:     emoji,
+		EmojiID:   emojiIDType,
+	})
+}
+
+func (r *DMRepository) GetMessageReactions(ctx context.Context, messageID int32) ([]repo.MessageReaction, error) {
+	return r.queries.GetMessageReactions(ctx, messageID)
+}
+
+func (r *DMRepository) GetReactionsByEmoji(ctx context.Context, messageID int32, emoji string) ([]repo.MessageReaction, error) {
+	return r.queries.GetReactionsByEmoji(ctx, repo.GetReactionsByEmojiParams{
+		MessageID: messageID,
+		Emoji:     emoji,
+	})
+}
+
+func (r *DMRepository) DeleteReaction(ctx context.Context, messageID, userID int32, emoji string) error {
+	_, err := r.queries.DeleteReaction(ctx, repo.DeleteReactionParams{
+		MessageID: messageID,
+		UserID:    userID,
+		Emoji:     emoji,
+	})
+	return err
+}
+
+func (r *DMRepository) DeleteAllReactions(ctx context.Context, messageID int32) error {
+	_, err := r.queries.DeleteAllReactions(ctx, messageID)
+	return err
+}
+
+func (r *DMRepository) CreateAttachment(ctx context.Context, messageID int32, fileURL, fileName, fileType string, fileSize int64, width, height *int32) (repo.MessageAttachment, error) {
+	var widthType, heightType pgtype.Int4
+	if width != nil {
+		widthType = pgtype.Int4{Int32: *width, Valid: true}
+	}
+	if height != nil {
+		heightType = pgtype.Int4{Int32: *height, Valid: true}
+	}
+
+	return r.queries.CreateMessageAttachment(ctx, repo.CreateMessageAttachmentParams{
+		MessageID: messageID,
+		FileUrl:   fileURL,
+		FileName:  fileName,
+		FileType:  fileType,
+		FileSize:  fileSize,
+		Width:     widthType,
+		Height:    heightType,
+	})
+}
+
+func (r *DMRepository) GetMessageAttachments(ctx context.Context, messageID int32) ([]repo.MessageAttachment, error) {
+	return r.queries.GetMessageAttachments(ctx, messageID)
+}
+
+func (r *DMRepository) DeleteAttachment(ctx context.Context, attachmentID int32) error {
+	_, err := r.queries.SoftDeleteMessageAttachment(ctx, attachmentID)
+	return err
+}
+
+func (r *DMRepository) DeleteMessageAttachments(ctx context.Context, messageID int32) error {
+	_, err := r.queries.SoftDeleteMessageAttachments(ctx, messageID)
+	return err
 }

@@ -12,11 +12,19 @@ import (
 )
 
 const createAuditLog = `-- name: CreateAuditLog :one
-INSERT INTO audit_logs (
-    server_id, user_id, action, target_id, target_type, changes, reason
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
-) RETURNING id, server_id, user_id, action, target_id, target_type, changes, reason, created_at
+INSERT INTO
+    audit_logs (
+        server_id,
+        user_id,
+        action,
+        target_id,
+        target_type,
+        changes,
+        reason
+    )
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING
+    id, server_id, user_id, action, target_id, target_type, changes, reason, created_at
 `
 
 type CreateAuditLogParams struct {
@@ -54,21 +62,36 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 	return i, err
 }
 
-const deleteOldAuditLogs = `-- name: DeleteOldAuditLogs :exec
-DELETE FROM audit_logs
-WHERE created_at < $1
+const deleteOldAuditLogs = `-- name: DeleteOldAuditLogs :one
+DELETE FROM audit_logs WHERE created_at < $1 RETURNING id, server_id, user_id, action, target_id, target_type, changes, reason, created_at
 `
 
-func (q *Queries) DeleteOldAuditLogs(ctx context.Context, createdAt pgtype.Timestamp) error {
-	_, err := q.db.Exec(ctx, deleteOldAuditLogs, createdAt)
-	return err
+func (q *Queries) DeleteOldAuditLogs(ctx context.Context, createdAt pgtype.Timestamp) (AuditLog, error) {
+	row := q.db.QueryRow(ctx, deleteOldAuditLogs, createdAt)
+	var i AuditLog
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.Action,
+		&i.TargetID,
+		&i.TargetType,
+		&i.Changes,
+		&i.Reason,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getAuditLogs = `-- name: GetAuditLogs :many
-SELECT id, server_id, user_id, action, target_id, target_type, changes, reason, created_at FROM audit_logs
-WHERE server_id = $1
+SELECT id, server_id, user_id, action, target_id, target_type, changes, reason, created_at
+FROM audit_logs
+WHERE
+    server_id = $1
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $2
+OFFSET
+    $3
 `
 
 type GetAuditLogsParams struct {
@@ -108,10 +131,15 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]A
 }
 
 const getAuditLogsByAction = `-- name: GetAuditLogsByAction :many
-SELECT id, server_id, user_id, action, target_id, target_type, changes, reason, created_at FROM audit_logs
-WHERE server_id = $1 AND action = $2
+SELECT id, server_id, user_id, action, target_id, target_type, changes, reason, created_at
+FROM audit_logs
+WHERE
+    server_id = $1
+    AND action = $2
 ORDER BY created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $3
+OFFSET
+    $4
 `
 
 type GetAuditLogsByActionParams struct {
@@ -157,10 +185,15 @@ func (q *Queries) GetAuditLogsByAction(ctx context.Context, arg GetAuditLogsByAc
 }
 
 const getAuditLogsByUser = `-- name: GetAuditLogsByUser :many
-SELECT id, server_id, user_id, action, target_id, target_type, changes, reason, created_at FROM audit_logs
-WHERE server_id = $1 AND user_id = $2
+SELECT id, server_id, user_id, action, target_id, target_type, changes, reason, created_at
+FROM audit_logs
+WHERE
+    server_id = $1
+    AND user_id = $2
 ORDER BY created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $3
+OFFSET
+    $4
 `
 
 type GetAuditLogsByUserParams struct {

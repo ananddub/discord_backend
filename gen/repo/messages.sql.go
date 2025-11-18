@@ -11,37 +11,139 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const bulkHardDeleteMessages = `-- name: BulkHardDeleteMessages :exec
-DELETE FROM messages
-WHERE id = ANY($1::int[])
+const bulkHardDeleteMessages = `-- name: BulkHardDeleteMessages :one
+DELETE FROM messages WHERE id = ANY ($1::int[]) RETURNING id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) BulkHardDeleteMessages(ctx context.Context, dollar_1 []int32) error {
-	_, err := q.db.Exec(ctx, bulkHardDeleteMessages, dollar_1)
-	return err
+func (q *Queries) BulkHardDeleteMessages(ctx context.Context, dollar_1 []int32) (Message, error) {
+	row := q.db.QueryRow(ctx, bulkHardDeleteMessages, dollar_1)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
 }
 
-const bulkSoftDeleteMessages = `-- name: BulkSoftDeleteMessages :exec
+const bulkSoftDeleteMessages = `-- name: BulkSoftDeleteMessages :one
 UPDATE messages
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = ANY($1::int[])
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = ANY ($1::int[])
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) BulkSoftDeleteMessages(ctx context.Context, dollar_1 []int32) error {
-	_, err := q.db.Exec(ctx, bulkSoftDeleteMessages, dollar_1)
-	return err
+func (q *Queries) BulkSoftDeleteMessages(ctx context.Context, dollar_1 []int32) (Message, error) {
+	row := q.db.QueryRow(ctx, bulkSoftDeleteMessages, dollar_1)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const createChatMessage = `-- name: CreateChatMessage :one
+INSERT INTO
+    messages (
+        receiver_id,
+        sender_id,
+        content,
+        message_type,
+        reply_to_message_id,
+        mention_everyone,
+        ischannel
+    )
+VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+`
+
+type CreateChatMessageParams struct {
+	ReceiverID       pgtype.Int4 `json:"receiver_id"`
+	SenderID         int32       `json:"sender_id"`
+	Content          string      `json:"content"`
+	MessageType      pgtype.Text `json:"message_type"`
+	ReplyToMessageID pgtype.Int4 `json:"reply_to_message_id"`
+	MentionEveryone  pgtype.Bool `json:"mention_everyone"`
+}
+
+func (q *Queries) CreateChatMessage(ctx context.Context, arg CreateChatMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, createChatMessage,
+		arg.ReceiverID,
+		arg.SenderID,
+		arg.Content,
+		arg.MessageType,
+		arg.ReplyToMessageID,
+		arg.MentionEveryone,
+	)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
 }
 
 const createMessage = `-- name: CreateMessage :one
-INSERT INTO messages (
-    channel_id, sender_id, content, message_type, reply_to_message_id, mention_everyone
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-) RETURNING id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+INSERT INTO
+    messages (
+        channel_id,
+        sender_id,
+        content,
+        message_type,
+        reply_to_message_id,
+        mention_everyone
+    )
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
 type CreateMessageParams struct {
-	ChannelID        int32       `json:"channel_id"`
+	ChannelID        pgtype.Int4 `json:"channel_id"`
 	SenderID         int32       `json:"sender_id"`
 	Content          string      `json:"content"`
 	MessageType      pgtype.Text `json:"message_type"`
@@ -62,6 +164,8 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 	err := row.Scan(
 		&i.ID,
 		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
 		&i.SenderID,
 		&i.Content,
 		&i.MessageType,
@@ -78,16 +182,21 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 }
 
 const getChannelMessages = `-- name: GetChannelMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND is_deleted = FALSE
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE
+    channel_id = $1
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $2
+OFFSET
+    $3
 `
 
 type GetChannelMessagesParams struct {
-	ChannelID int32 `json:"channel_id"`
-	Limit     int32 `json:"limit"`
-	Offset    int32 `json:"offset"`
+	ChannelID pgtype.Int4 `json:"channel_id"`
+	Limit     int32       `json:"limit"`
+	Offset    int32       `json:"offset"`
 }
 
 func (q *Queries) GetChannelMessages(ctx context.Context, arg GetChannelMessagesParams) ([]Message, error) {
@@ -102,6 +211,237 @@ func (q *Queries) GetChannelMessages(ctx context.Context, arg GetChannelMessages
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
+			&i.SenderID,
+			&i.Content,
+			&i.MessageType,
+			&i.ReplyToMessageID,
+			&i.IsEdited,
+			&i.IsPinned,
+			&i.MentionEveryone,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EditedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChatMessageByID = `-- name: GetChatMessageByID :one
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages WHERE id = $1 AND is_deleted = FALSE LIMIT 1
+`
+
+func (q *Queries) GetChatMessageByID(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, getChatMessageByID, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const getChatMessages = `-- name: GetChatMessages :many
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE (
+        (
+            sender_id = $1
+            AND receiver_id = $2
+        )
+        OR (
+            sender_id = $2
+            AND receiver_id = $1
+        )
+    )
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+LIMIT $3
+OFFSET
+    $4
+`
+
+type GetChatMessagesParams struct {
+	SenderID   int32       `json:"sender_id"`
+	ReceiverID pgtype.Int4 `json:"receiver_id"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
+}
+
+func (q *Queries) GetChatMessages(ctx context.Context, arg GetChatMessagesParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, getChatMessages,
+		arg.SenderID,
+		arg.ReceiverID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
+			&i.SenderID,
+			&i.Content,
+			&i.MessageType,
+			&i.ReplyToMessageID,
+			&i.IsEdited,
+			&i.IsPinned,
+			&i.MentionEveryone,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EditedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChatMessagesAfter = `-- name: GetChatMessagesAfter :many
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE (
+        (
+            sender_id = $1
+            AND receiver_id = $2
+        )
+        OR (
+            sender_id = $2
+            AND receiver_id = $1
+        )
+    )
+    AND id > $3
+    AND is_deleted = FALSE
+ORDER BY created_at ASC
+LIMIT $4
+`
+
+type GetChatMessagesAfterParams struct {
+	SenderID   int32       `json:"sender_id"`
+	ReceiverID pgtype.Int4 `json:"receiver_id"`
+	ID         int32       `json:"id"`
+	Limit      int32       `json:"limit"`
+}
+
+func (q *Queries) GetChatMessagesAfter(ctx context.Context, arg GetChatMessagesAfterParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, getChatMessagesAfter,
+		arg.SenderID,
+		arg.ReceiverID,
+		arg.ID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
+			&i.SenderID,
+			&i.Content,
+			&i.MessageType,
+			&i.ReplyToMessageID,
+			&i.IsEdited,
+			&i.IsPinned,
+			&i.MentionEveryone,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EditedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChatMessagesBefore = `-- name: GetChatMessagesBefore :many
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE (
+        (
+            sender_id = $1
+            AND receiver_id = $2
+        )
+        OR (
+            sender_id = $2
+            AND receiver_id = $1
+        )
+    )
+    AND id < $3
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+LIMIT $4
+`
+
+type GetChatMessagesBeforeParams struct {
+	SenderID   int32       `json:"sender_id"`
+	ReceiverID pgtype.Int4 `json:"receiver_id"`
+	ID         int32       `json:"id"`
+	Limit      int32       `json:"limit"`
+}
+
+func (q *Queries) GetChatMessagesBefore(ctx context.Context, arg GetChatMessagesBeforeParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, getChatMessagesBefore,
+		arg.SenderID,
+		arg.ReceiverID,
+		arg.ID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
 			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
@@ -125,8 +465,7 @@ func (q *Queries) GetChannelMessages(ctx context.Context, arg GetChannelMessages
 }
 
 const getMessageByID = `-- name: GetMessageByID :one
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE id = $1 AND is_deleted = FALSE LIMIT 1
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetMessageByID(ctx context.Context, id int32) (Message, error) {
@@ -135,6 +474,8 @@ func (q *Queries) GetMessageByID(ctx context.Context, id int32) (Message, error)
 	err := row.Scan(
 		&i.ID,
 		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
 		&i.SenderID,
 		&i.Content,
 		&i.MessageType,
@@ -151,16 +492,20 @@ func (q *Queries) GetMessageByID(ctx context.Context, id int32) (Message, error)
 }
 
 const getMessagesAfter = `-- name: GetMessagesAfter :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND id > $2 AND is_deleted = FALSE
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE
+    channel_id = $1
+    AND id > $2
+    AND is_deleted = FALSE
 ORDER BY created_at ASC
 LIMIT $3
 `
 
 type GetMessagesAfterParams struct {
-	ChannelID int32 `json:"channel_id"`
-	ID        int32 `json:"id"`
-	Limit     int32 `json:"limit"`
+	ChannelID pgtype.Int4 `json:"channel_id"`
+	ID        int32       `json:"id"`
+	Limit     int32       `json:"limit"`
 }
 
 func (q *Queries) GetMessagesAfter(ctx context.Context, arg GetMessagesAfterParams) ([]Message, error) {
@@ -175,6 +520,8 @@ func (q *Queries) GetMessagesAfter(ctx context.Context, arg GetMessagesAfterPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
 			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
@@ -198,16 +545,20 @@ func (q *Queries) GetMessagesAfter(ctx context.Context, arg GetMessagesAfterPara
 }
 
 const getMessagesBefore = `-- name: GetMessagesBefore :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND id < $2 AND is_deleted = FALSE
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE
+    channel_id = $1
+    AND id < $2
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $3
 `
 
 type GetMessagesBeforeParams struct {
-	ChannelID int32 `json:"channel_id"`
-	ID        int32 `json:"id"`
-	Limit     int32 `json:"limit"`
+	ChannelID pgtype.Int4 `json:"channel_id"`
+	ID        int32       `json:"id"`
+	Limit     int32       `json:"limit"`
 }
 
 func (q *Queries) GetMessagesBefore(ctx context.Context, arg GetMessagesBeforeParams) ([]Message, error) {
@@ -222,6 +573,8 @@ func (q *Queries) GetMessagesBefore(ctx context.Context, arg GetMessagesBeforePa
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
 			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
@@ -245,12 +598,16 @@ func (q *Queries) GetMessagesBefore(ctx context.Context, arg GetMessagesBeforePa
 }
 
 const getPinnedMessages = `-- name: GetPinnedMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 AND is_pinned = TRUE AND is_deleted = FALSE
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE
+    channel_id = $1
+    AND is_pinned = TRUE
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetPinnedMessages(ctx context.Context, channelID int32) ([]Message, error) {
+func (q *Queries) GetPinnedMessages(ctx context.Context, channelID pgtype.Int4) ([]Message, error) {
 	rows, err := q.db.Query(ctx, getPinnedMessages, channelID)
 	if err != nil {
 		return nil, err
@@ -262,6 +619,8 @@ func (q *Queries) GetPinnedMessages(ctx context.Context, channelID int32) ([]Mes
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
 			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
@@ -285,10 +644,15 @@ func (q *Queries) GetPinnedMessages(ctx context.Context, channelID int32) ([]Mes
 }
 
 const getUserMessages = `-- name: GetUserMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE sender_id = $1 AND is_deleted = FALSE
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE
+    sender_id = $1
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $2
+OFFSET
+    $3
 `
 
 type GetUserMessagesParams struct {
@@ -309,6 +673,8 @@ func (q *Queries) GetUserMessages(ctx context.Context, arg GetUserMessagesParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
 			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
@@ -331,49 +697,215 @@ func (q *Queries) GetUserMessages(ctx context.Context, arg GetUserMessagesParams
 	return items, nil
 }
 
-const hardDeleteMessage = `-- name: HardDeleteMessage :exec
-DELETE FROM messages
-WHERE id = $1
+const hardDeleteChatMessage = `-- name: HardDeleteChatMessage :one
+DELETE FROM messages WHERE id = $1 RETURNING id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) HardDeleteMessage(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, hardDeleteMessage, id)
-	return err
+func (q *Queries) HardDeleteChatMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, hardDeleteChatMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
 }
 
-const pinMessage = `-- name: PinMessage :exec
-UPDATE messages
-SET is_pinned = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1 AND is_deleted = FALSE
+const hardDeleteMessage = `-- name: HardDeleteMessage :one
+DELETE FROM messages WHERE id = $1 RETURNING id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) PinMessage(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, pinMessage, id)
-	return err
+func (q *Queries) HardDeleteMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, hardDeleteMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
 }
 
-const restoreMessage = `-- name: RestoreMessage :exec
+const pinMessage = `-- name: PinMessage :one
 UPDATE messages
-SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+SET
+    is_pinned = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) RestoreMessage(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, restoreMessage, id)
-	return err
+func (q *Queries) PinMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, pinMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const restoreMessage = `-- name: RestoreMessage :one
+UPDATE messages
+SET
+    is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+`
+
+func (q *Queries) RestoreMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, restoreMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const searchChatMessages = `-- name: SearchChatMessages :many
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE (
+        (
+            sender_id = $1
+            AND receiver_id = $2
+        )
+        OR (
+            sender_id = $2
+            AND receiver_id = $1
+        )
+    )
+    AND content ILIKE '%' || $3 || '%'
+    AND is_deleted = FALSE
+ORDER BY created_at DESC
+LIMIT $4
+OFFSET
+    $5
+`
+
+type SearchChatMessagesParams struct {
+	SenderID   int32       `json:"sender_id"`
+	ReceiverID pgtype.Int4 `json:"receiver_id"`
+	Column3    pgtype.Text `json:"column_3"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
+}
+
+func (q *Queries) SearchChatMessages(ctx context.Context, arg SearchChatMessagesParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, searchChatMessages,
+		arg.SenderID,
+		arg.ReceiverID,
+		arg.Column3,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
+			&i.SenderID,
+			&i.Content,
+			&i.MessageType,
+			&i.ReplyToMessageID,
+			&i.IsEdited,
+			&i.IsPinned,
+			&i.MentionEveryone,
+			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.EditedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const searchMessages = `-- name: SearchMessages :many
-SELECT id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at FROM messages
-WHERE channel_id = $1 
-  AND content ILIKE '%' || $2 || '%'
-  AND is_deleted = FALSE
+SELECT id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+FROM messages
+WHERE
+    channel_id = $1
+    AND content ILIKE '%' || $2 || '%'
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $3
+OFFSET
+    $4
 `
 
 type SearchMessagesParams struct {
-	ChannelID int32       `json:"channel_id"`
+	ChannelID pgtype.Int4 `json:"channel_id"`
 	Column2   pgtype.Text `json:"column_2"`
 	Limit     int32       `json:"limit"`
 	Offset    int32       `json:"offset"`
@@ -396,6 +928,8 @@ func (q *Queries) SearchMessages(ctx context.Context, arg SearchMessagesParams) 
 		if err := rows.Scan(
 			&i.ID,
 			&i.ChannelID,
+			&i.ReceiverID,
+			&i.Ischannel,
 			&i.SenderID,
 			&i.Content,
 			&i.MessageType,
@@ -418,37 +952,163 @@ func (q *Queries) SearchMessages(ctx context.Context, arg SearchMessagesParams) 
 	return items, nil
 }
 
-const softDeleteMessage = `-- name: SoftDeleteMessage :exec
+const softDeleteChatMessage = `-- name: SoftDeleteChatMessage :one
 UPDATE messages
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) SoftDeleteMessage(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, softDeleteMessage, id)
-	return err
+func (q *Queries) SoftDeleteChatMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, softDeleteChatMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
 }
 
-const unpinMessage = `-- name: UnpinMessage :exec
+const softDeleteMessage = `-- name: SoftDeleteMessage :one
 UPDATE messages
-SET is_pinned = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1 AND is_deleted = FALSE
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
-func (q *Queries) UnpinMessage(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, unpinMessage, id)
-	return err
+func (q *Queries) SoftDeleteMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, softDeleteMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
 }
 
-const updateMessage = `-- name: UpdateMessage :one
+const unpinMessage = `-- name: UnpinMessage :one
 UPDATE messages
-SET 
+SET
+    is_pinned = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+`
+
+func (q *Queries) UnpinMessage(ctx context.Context, id int32) (Message, error) {
+	row := q.db.QueryRow(ctx, unpinMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const updateChatMessage = `-- name: UpdateChatMessage :one
+UPDATE messages
+SET
     content = $2,
     is_edited = TRUE,
     edited_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1 AND is_deleted = FALSE
-RETURNING id, channel_id, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+`
+
+type UpdateChatMessageParams struct {
+	ID      int32  `json:"id"`
+	Content string `json:"content"`
+}
+
+func (q *Queries) UpdateChatMessage(ctx context.Context, arg UpdateChatMessageParams) (Message, error) {
+	row := q.db.QueryRow(ctx, updateChatMessage, arg.ID, arg.Content)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const updateMessage = `-- name: UpdateMessage :one
+UPDATE messages
+SET
+    content = $2,
+    is_edited = TRUE,
+    edited_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
 
 type UpdateMessageParams struct {
@@ -462,6 +1122,8 @@ func (q *Queries) UpdateMessage(ctx context.Context, arg UpdateMessageParams) (M
 	err := row.Scan(
 		&i.ID,
 		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
 		&i.SenderID,
 		&i.Content,
 		&i.MessageType,

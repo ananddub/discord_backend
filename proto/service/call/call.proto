@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+option go_package = "discord/pkg/proto";
+
+package protoservice.call;
+
+service call {
+  rpc CreateCall(CreateCallRequest) returns (CreateCallResponse);
+  rpc GetCall(GetCallRequest) returns (GetCallResponse);
+  rpc EndCall(EndCallRequest) returns (EndCallResponse);
+  rpc JoinCall(JoinCallRequest) returns (JoinCallResponse);
+  rpc LeaveCall(LeaveCallRequest) returns (LeaveCallResponse);
+}
+
+message CreateCallRequest {
+  int32 channel_id = 1 ;
+  repeated int32 participant_ids = 2 ;
+}
+
+message CreateCallResponse {
+  int32 call_id = 1 ;
+  bool success = 2 ;
+}
+
+message GetCallRequest {
+  int32 call_id = 1 ;
+}
+
+message GetCallResponse {
+  int32 call_id = 1 ;
+  int32 channel_id = 2 ;
+  repeated int32 participant_ids = 3 ;
+  bool is_active = 4 ;
+}
+
+message EndCallRequest {
+  int32 call_id = 1 ;
+}
+
+message EndCallResponse {
+  bool success = 1 ;
+}
+
+message JoinCallRequest {
+  int32 call_id = 1 ;
+  int32 user_id = 2 ;
+}
+
+message JoinCallResponse {
+  bool success = 1 ;
+}
+
+message LeaveCallRequest {
+  int32 call_id = 1 ;
+  int32 user_id = 2 ;
+}
+
+message LeaveCallResponse {
+  bool success = 1 ;
+}

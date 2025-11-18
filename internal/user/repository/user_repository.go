@@ -63,7 +63,8 @@ func (r *UserRepository) UpdateUser(ctx context.Context, userID int32, fullName,
 }
 
 func (r *UserRepository) DeleteUser(ctx context.Context, userID int32) error {
-	return r.q.SoftDeleteUser(ctx, userID)
+	_, err := r.q.SoftDeleteUser(ctx, userID)
+	return err
 }
 
 func (r *UserRepository) SearchUsers(ctx context.Context, query string, limit, offset int32) ([]repo.User, error) {
@@ -82,10 +83,11 @@ func (r *UserRepository) ListUsers(ctx context.Context, limit, offset int32) ([]
 }
 
 func (r *UserRepository) UpdateUserPassword(ctx context.Context, userID int32, hashedPassword string) error {
-	return r.q.UpdateUserPassword(ctx, repo.UpdateUserPasswordParams{
+	_, err := r.q.UpdateUserPassword(ctx, repo.UpdateUserPasswordParams{
 		ID:       userID,
 		Password: hashedPassword,
 	})
+	return err
 }
 
 // User Presence
@@ -94,10 +96,11 @@ func (r *UserRepository) GetUserPresence(ctx context.Context, userID int32) (rep
 }
 
 func (r *UserRepository) UpdatePresenceStatus(ctx context.Context, userID int32, status string) error {
-	return r.q.UpdatePresenceStatus(ctx, repo.UpdatePresenceStatusParams{
+	_, err := r.q.UpdatePresenceStatus(ctx, repo.UpdatePresenceStatusParams{
 		UserID: userID,
 		Status: pgtype.Text{String: status, Valid: true},
 	})
+	return err
 }
 
 func (r *UserRepository) UpsertUserPresence(ctx context.Context, userID int32, status, customStatus, customStatusEmoji, activity *string) (repo.UserPresence, error) {
@@ -136,7 +139,8 @@ func (r *UserRepository) SetCustomStatus(ctx context.Context, userID int32, cust
 		params.CustomStatusExpiresAt = pgtype.Timestamp{Time: *expiresAt, Valid: true}
 	}
 
-	return r.q.SetCustomStatus(ctx, params)
+	_, err := r.q.SetCustomStatus(ctx, params)
+	return err
 }
 
 func (r *UserRepository) GetMultipleUserPresences(ctx context.Context, userIDs []int32) ([]repo.UserPresence, error) {
@@ -144,24 +148,27 @@ func (r *UserRepository) GetMultipleUserPresences(ctx context.Context, userIDs [
 }
 
 func (r *UserRepository) ClearExpiredCustomStatuses(ctx context.Context) error {
-	return r.q.ClearExpiredCustomStatuses(ctx)
+	_, err := r.q.ClearExpiredCustomStatuses(ctx)
+	return err
 }
 
 // User Blocking (using friends table)
 func (r *UserRepository) BlockUser(ctx context.Context, userID, blockedUserID int32) error {
-	return r.q.BlockUser(ctx, repo.BlockUserParams{
+	_, err := r.q.BlockUser(ctx, repo.BlockUserParams{
 		UserID:   userID,
 		FriendID: blockedUserID,
 	})
+	return err
 }
 
 func (r *UserRepository) UnblockUser(ctx context.Context, userID, blockedUserID int32) error {
 	// Update status back to 'accepted' or remove the relationship
-	return r.q.UpdateFriendStatus(ctx, repo.UpdateFriendStatusParams{
+	_, err := r.q.UpdateFriendStatus(ctx, repo.UpdateFriendStatusParams{
 		UserID:   userID,
 		FriendID: blockedUserID,
 		Status:   "none", // or "accepted" if they were friends before
 	})
+	return err
 }
 
 func (r *UserRepository) GetBlockedUsers(ctx context.Context, userID int32) ([]repo.Friend, error) {
@@ -169,8 +176,13 @@ func (r *UserRepository) GetBlockedUsers(ctx context.Context, userID int32) ([]r
 }
 
 func (r *UserRepository) UpdateUserStatus(ctx context.Context, userID int32, status string) error {
-	return r.q.UpdateUserStatus(ctx, repo.UpdateUserStatusParams{
+	_, err := r.q.UpdateUserStatus(ctx, repo.UpdateUserStatusParams{
 		ID:     userID,
 		Status: status,
 	})
+	return err
+}
+
+func (r *UserRepository) GetFriends(ctx context.Context, userID int32) ([]repo.User, error) {
+	return r.q.ConnectedUser(ctx, userID)
 }

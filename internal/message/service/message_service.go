@@ -7,15 +7,18 @@ import (
 	"discord/gen/repo"
 	commonErrors "discord/internal/common/errors"
 	messageRepo "discord/internal/message/repository"
+	"discord/pkg/pubsub"
 )
 
 type MessageService struct {
 	messageRepo *messageRepo.MessageRepository
+	pubsub      *pubsub.PubSub
 }
 
 func NewMessageService(messageRepo *messageRepo.MessageRepository) *MessageService {
 	return &MessageService{
 		messageRepo: messageRepo,
+		pubsub:      pubsub.Get(),
 	}
 }
 

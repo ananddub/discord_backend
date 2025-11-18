@@ -10,11 +10,11 @@ import (
 )
 
 const assignRoleToMember = `-- name: AssignRoleToMember :one
-INSERT INTO member_roles (
-    member_id, role_id
-) VALUES (
-    $1, $2
-) RETURNING id, member_id, role_id, assigned_at, updated_at
+INSERT INTO
+    member_roles (member_id, role_id)
+VALUES ($1, $2)
+RETURNING
+    id, member_id, role_id, assigned_at, updated_at
 `
 
 type AssignRoleToMemberParams struct {
@@ -36,9 +36,11 @@ func (q *Queries) AssignRoleToMember(ctx context.Context, arg AssignRoleToMember
 }
 
 const getMemberRoles = `-- name: GetMemberRoles :many
-SELECT r.id, r.server_id, r.name, r.color, r.hoist, r.position, r.permissions, r.mentionable, r.icon, r.description, r.is_default, r.is_deleted, r.created_at, r.updated_at FROM roles r
-INNER JOIN member_roles mr ON r.id = mr.role_id
-WHERE mr.member_id = $1
+SELECT r.id, r.server_id, r.name, r.color, r.hoist, r.position, r.permissions, r.mentionable, r.icon, r.description, r.is_default, r.is_deleted, r.created_at, r.updated_at
+FROM roles r
+    INNER JOIN member_roles mr ON r.id = mr.role_id
+WHERE
+    mr.member_id = $1
 ORDER BY r.position DESC
 `
 
@@ -78,9 +80,12 @@ func (q *Queries) GetMemberRoles(ctx context.Context, memberID int32) ([]Role, e
 }
 
 const getRoleMembers = `-- name: GetRoleMembers :many
-SELECT sm.id, sm.server_id, sm.user_id, sm.nickname, sm.joined_at, sm.is_muted, sm.is_deafened, sm.updated_at FROM server_members sm
-INNER JOIN member_roles mr ON sm.id = mr.member_id
-WHERE mr.role_id = $1
+SELECT sm.id, sm.server_id, sm.user_id, sm.nickname, sm.joined_at, sm.is_muted, sm.is_deafened, sm.updated_at
+FROM
+    server_members sm
+    INNER JOIN member_roles mr ON sm.id = mr.member_id
+WHERE
+    mr.role_id = $1
 `
 
 func (q *Queries) GetRoleMembers(ctx context.Context, roleID int32) ([]ServerMember, error) {
@@ -112,19 +117,30 @@ func (q *Queries) GetRoleMembers(ctx context.Context, roleID int32) ([]ServerMem
 	return items, nil
 }
 
-const removeAllMemberRoles = `-- name: RemoveAllMemberRoles :exec
-DELETE FROM member_roles
-WHERE member_id = $1
+const removeAllMemberRoles = `-- name: RemoveAllMemberRoles :one
+DELETE FROM member_roles WHERE member_id = $1 RETURNING id, member_id, role_id, assigned_at, updated_at
 `
 
-func (q *Queries) RemoveAllMemberRoles(ctx context.Context, memberID int32) error {
-	_, err := q.db.Exec(ctx, removeAllMemberRoles, memberID)
-	return err
+func (q *Queries) RemoveAllMemberRoles(ctx context.Context, memberID int32) (MemberRole, error) {
+	row := q.db.QueryRow(ctx, removeAllMemberRoles, memberID)
+	var i MemberRole
+	err := row.Scan(
+		&i.ID,
+		&i.MemberID,
+		&i.RoleID,
+		&i.AssignedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const removeRoleFromMember = `-- name: RemoveRoleFromMember :exec
+const removeRoleFromMember = `-- name: RemoveRoleFromMember :one
 DELETE FROM member_roles
-WHERE member_id = $1 AND role_id = $2
+WHERE
+    member_id = $1
+    AND role_id = $2
+RETURNING
+    id, member_id, role_id, assigned_at, updated_at
 `
 
 type RemoveRoleFromMemberParams struct {
@@ -132,7 +148,15 @@ type RemoveRoleFromMemberParams struct {
 	RoleID   int32 `json:"role_id"`
 }
 
-func (q *Queries) RemoveRoleFromMember(ctx context.Context, arg RemoveRoleFromMemberParams) error {
-	_, err := q.db.Exec(ctx, removeRoleFromMember, arg.MemberID, arg.RoleID)
-	return err
+func (q *Queries) RemoveRoleFromMember(ctx context.Context, arg RemoveRoleFromMemberParams) (MemberRole, error) {
+	row := q.db.QueryRow(ctx, removeRoleFromMember, arg.MemberID, arg.RoleID)
+	var i MemberRole
+	err := row.Scan(
+		&i.ID,
+		&i.MemberID,
+		&i.RoleID,
+		&i.AssignedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

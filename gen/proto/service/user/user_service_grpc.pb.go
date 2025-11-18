@@ -8,6 +8,7 @@ package user
 
 import (
 	context "context"
+	schema "discord/gen/proto/schema"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,18 +20,21 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_GetUser_FullMethodName            = "/protoservice.user.UserService/GetUser"
-	UserService_UpdateUser_FullMethodName         = "/protoservice.user.UserService/UpdateUser"
-	UserService_GetUserProfile_FullMethodName     = "/protoservice.user.UserService/GetUserProfile"
-	UserService_DeleteUser_FullMethodName         = "/protoservice.user.UserService/DeleteUser"
-	UserService_UpdateStatus_FullMethodName       = "/protoservice.user.UserService/UpdateStatus"
-	UserService_GetUserPresence_FullMethodName    = "/protoservice.user.UserService/GetUserPresence"
-	UserService_SetCustomStatus_FullMethodName    = "/protoservice.user.UserService/SetCustomStatus"
-	UserService_UpdateUserSettings_FullMethodName = "/protoservice.user.UserService/UpdateUserSettings"
-	UserService_GetUserSettings_FullMethodName    = "/protoservice.user.UserService/GetUserSettings"
-	UserService_BlockUser_FullMethodName          = "/protoservice.user.UserService/BlockUser"
-	UserService_UnblockUser_FullMethodName        = "/protoservice.user.UserService/UnblockUser"
-	UserService_GetBlockedUsers_FullMethodName    = "/protoservice.user.UserService/GetBlockedUsers"
+	UserService_GetUser_FullMethodName                  = "/protoservice.user.UserService/GetUser"
+	UserService_UpdateUser_FullMethodName               = "/protoservice.user.UserService/UpdateUser"
+	UserService_GetUserProfile_FullMethodName           = "/protoservice.user.UserService/GetUserProfile"
+	UserService_DeleteUser_FullMethodName               = "/protoservice.user.UserService/DeleteUser"
+	UserService_UpdateStatus_FullMethodName             = "/protoservice.user.UserService/UpdateStatus"
+	UserService_GetUserPresence_FullMethodName          = "/protoservice.user.UserService/GetUserPresence"
+	UserService_SetCustomStatus_FullMethodName          = "/protoservice.user.UserService/SetCustomStatus"
+	UserService_UpdateUserSettings_FullMethodName       = "/protoservice.user.UserService/UpdateUserSettings"
+	UserService_GetUserSettings_FullMethodName          = "/protoservice.user.UserService/GetUserSettings"
+	UserService_BlockUser_FullMethodName                = "/protoservice.user.UserService/BlockUser"
+	UserService_UnblockUser_FullMethodName              = "/protoservice.user.UserService/UnblockUser"
+	UserService_GetBlockedUsers_FullMethodName          = "/protoservice.user.UserService/GetBlockedUsers"
+	UserService_StreamUserUpdates_FullMethodName        = "/protoservice.user.UserService/StreamUserUpdates"
+	UserService_StreamUserFriendUpdates_FullMethodName  = "/protoservice.user.UserService/StreamUserFriendUpdates"
+	UserService_MinioGetUploadProfileUrl_FullMethodName = "/protoservice.user.UserService/MinioGetUploadProfileUrl"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -53,6 +57,10 @@ type UserServiceClient interface {
 	BlockUser(ctx context.Context, in *BlockUserRequest, opts ...grpc.CallOption) (*BlockUserResponse, error)
 	UnblockUser(ctx context.Context, in *UnblockUserRequest, opts ...grpc.CallOption) (*UnblockUserResponse, error)
 	GetBlockedUsers(ctx context.Context, in *GetBlockedUsersRequest, opts ...grpc.CallOption) (*GetBlockedUsersResponse, error)
+	// Streaming
+	StreamUserUpdates(ctx context.Context, in *StreamUserUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[schema.User], error)
+	StreamUserFriendUpdates(ctx context.Context, in *StreamUserUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[schema.User], error)
+	MinioGetUploadProfileUrl(ctx context.Context, in *MinioGetUploadProfileUrlRequest, opts ...grpc.CallOption) (*MinioGetUploadProfileUrlResponse, error)
 }
 
 type userServiceClient struct {
@@ -183,6 +191,54 @@ func (c *userServiceClient) GetBlockedUsers(ctx context.Context, in *GetBlockedU
 	return out, nil
 }
 
+func (c *userServiceClient) StreamUserUpdates(ctx context.Context, in *StreamUserUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[schema.User], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[0], UserService_StreamUserUpdates_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamUserUpdatesRequest, schema.User]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UserService_StreamUserUpdatesClient = grpc.ServerStreamingClient[schema.User]
+
+func (c *userServiceClient) StreamUserFriendUpdates(ctx context.Context, in *StreamUserUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[schema.User], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[1], UserService_StreamUserFriendUpdates_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamUserUpdatesRequest, schema.User]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UserService_StreamUserFriendUpdatesClient = grpc.ServerStreamingClient[schema.User]
+
+func (c *userServiceClient) MinioGetUploadProfileUrl(ctx context.Context, in *MinioGetUploadProfileUrlRequest, opts ...grpc.CallOption) (*MinioGetUploadProfileUrlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MinioGetUploadProfileUrlResponse)
+	err := c.cc.Invoke(ctx, UserService_MinioGetUploadProfileUrl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -203,6 +259,10 @@ type UserServiceServer interface {
 	BlockUser(context.Context, *BlockUserRequest) (*BlockUserResponse, error)
 	UnblockUser(context.Context, *UnblockUserRequest) (*UnblockUserResponse, error)
 	GetBlockedUsers(context.Context, *GetBlockedUsersRequest) (*GetBlockedUsersResponse, error)
+	// Streaming
+	StreamUserUpdates(*StreamUserUpdatesRequest, grpc.ServerStreamingServer[schema.User]) error
+	StreamUserFriendUpdates(*StreamUserUpdatesRequest, grpc.ServerStreamingServer[schema.User]) error
+	MinioGetUploadProfileUrl(context.Context, *MinioGetUploadProfileUrlRequest) (*MinioGetUploadProfileUrlResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -248,6 +308,15 @@ func (UnimplementedUserServiceServer) UnblockUser(context.Context, *UnblockUserR
 }
 func (UnimplementedUserServiceServer) GetBlockedUsers(context.Context, *GetBlockedUsersRequest) (*GetBlockedUsersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlockedUsers not implemented")
+}
+func (UnimplementedUserServiceServer) StreamUserUpdates(*StreamUserUpdatesRequest, grpc.ServerStreamingServer[schema.User]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamUserUpdates not implemented")
+}
+func (UnimplementedUserServiceServer) StreamUserFriendUpdates(*StreamUserUpdatesRequest, grpc.ServerStreamingServer[schema.User]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamUserFriendUpdates not implemented")
+}
+func (UnimplementedUserServiceServer) MinioGetUploadProfileUrl(context.Context, *MinioGetUploadProfileUrlRequest) (*MinioGetUploadProfileUrlResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MinioGetUploadProfileUrl not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -486,6 +555,46 @@ func _UserService_GetBlockedUsers_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_StreamUserUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamUserUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(UserServiceServer).StreamUserUpdates(m, &grpc.GenericServerStream[StreamUserUpdatesRequest, schema.User]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UserService_StreamUserUpdatesServer = grpc.ServerStreamingServer[schema.User]
+
+func _UserService_StreamUserFriendUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamUserUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(UserServiceServer).StreamUserFriendUpdates(m, &grpc.GenericServerStream[StreamUserUpdatesRequest, schema.User]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UserService_StreamUserFriendUpdatesServer = grpc.ServerStreamingServer[schema.User]
+
+func _UserService_MinioGetUploadProfileUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MinioGetUploadProfileUrlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).MinioGetUploadProfileUrl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_MinioGetUploadProfileUrl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).MinioGetUploadProfileUrl(ctx, req.(*MinioGetUploadProfileUrlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -541,7 +650,22 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetBlockedUsers",
 			Handler:    _UserService_GetBlockedUsers_Handler,
 		},
+		{
+			MethodName: "MinioGetUploadProfileUrl",
+			Handler:    _UserService_MinioGetUploadProfileUrl_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamUserUpdates",
+			Handler:       _UserService_StreamUserUpdates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StreamUserFriendUpdates",
+			Handler:       _UserService_StreamUserFriendUpdates_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "service/user/user_service.proto",
 }

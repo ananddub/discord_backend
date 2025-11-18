@@ -12,11 +12,29 @@ import (
 )
 
 const createRole = `-- name: CreateRole :one
-INSERT INTO roles (
-    server_id, name, color, hoist, position, permissions, mentionable, description
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
-) RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
+INSERT INTO
+    roles (
+        server_id,
+        name,
+        color,
+        hoist,
+        position,
+        permissions,
+        mentionable,
+        description
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8
+    )
+RETURNING
+    id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
 type CreateRoleParams struct {
@@ -62,8 +80,7 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 }
 
 const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at FROM roles
-WHERE id = $1 AND is_deleted = FALSE LIMIT 1
+SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at FROM roles WHERE id = $1 AND is_deleted = FALSE LIMIT 1
 `
 
 func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
@@ -89,8 +106,11 @@ func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
 }
 
 const getServerRoles = `-- name: GetServerRoles :many
-SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at FROM roles
-WHERE server_id = $1 AND is_deleted = FALSE
+SELECT id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
+FROM roles
+WHERE
+    server_id = $1
+    AND is_deleted = FALSE
 ORDER BY position DESC
 `
 
@@ -129,51 +149,126 @@ func (q *Queries) GetServerRoles(ctx context.Context, serverID int32) ([]Role, e
 	return items, nil
 }
 
-const hardDeleteRole = `-- name: HardDeleteRole :exec
-DELETE FROM roles
-WHERE id = $1
+const hardDeleteRole = `-- name: HardDeleteRole :one
+DELETE FROM roles WHERE id = $1 RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
-func (q *Queries) HardDeleteRole(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, hardDeleteRole, id)
-	return err
+func (q *Queries) HardDeleteRole(ctx context.Context, id int32) (Role, error) {
+	row := q.db.QueryRow(ctx, hardDeleteRole, id)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.Name,
+		&i.Color,
+		&i.Hoist,
+		&i.Position,
+		&i.Permissions,
+		&i.Mentionable,
+		&i.Icon,
+		&i.Description,
+		&i.IsDefault,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const restoreRole = `-- name: RestoreRole :exec
+const restoreRole = `-- name: RestoreRole :one
 UPDATE roles
-SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+SET
+    is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
-func (q *Queries) RestoreRole(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, restoreRole, id)
-	return err
+func (q *Queries) RestoreRole(ctx context.Context, id int32) (Role, error) {
+	row := q.db.QueryRow(ctx, restoreRole, id)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.Name,
+		&i.Color,
+		&i.Hoist,
+		&i.Position,
+		&i.Permissions,
+		&i.Mentionable,
+		&i.Icon,
+		&i.Description,
+		&i.IsDefault,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const softDeleteRole = `-- name: SoftDeleteRole :exec
+const softDeleteRole = `-- name: SoftDeleteRole :one
 UPDATE roles
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+RETURNING
+    id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
-func (q *Queries) SoftDeleteRole(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, softDeleteRole, id)
-	return err
+func (q *Queries) SoftDeleteRole(ctx context.Context, id int32) (Role, error) {
+	row := q.db.QueryRow(ctx, softDeleteRole, id)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.Name,
+		&i.Color,
+		&i.Hoist,
+		&i.Position,
+		&i.Permissions,
+		&i.Mentionable,
+		&i.Icon,
+		&i.Description,
+		&i.IsDefault,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateRole = `-- name: UpdateRole :one
 UPDATE roles
-SET 
+SET
     name = COALESCE($1, name),
     color = COALESCE($2, color),
     hoist = COALESCE($3, hoist),
-    position = COALESCE($4, position),
-    permissions = COALESCE($5, permissions),
-    mentionable = COALESCE($6, mentionable),
-    description = COALESCE($7, description),
+    position = COALESCE(
+        $4,
+        position
+    ),
+    permissions = COALESCE(
+        $5,
+        permissions
+    ),
+    mentionable = COALESCE(
+        $6,
+        mentionable
+    ),
+    description = COALESCE(
+        $7,
+        description
+    ),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $8 AND is_deleted = FALSE
-RETURNING id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
+WHERE
+    id = $8
+    AND is_deleted = FALSE
+RETURNING
+    id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
 type UpdateRoleParams struct {
@@ -218,10 +313,16 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 	return i, err
 }
 
-const updateRolePosition = `-- name: UpdateRolePosition :exec
+const updateRolePosition = `-- name: UpdateRolePosition :one
 UPDATE roles
-SET position = $2, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1 AND is_deleted = FALSE
+SET
+    position = $2,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+RETURNING
+    id, server_id, name, color, hoist, position, permissions, mentionable, icon, description, is_default, is_deleted, created_at, updated_at
 `
 
 type UpdateRolePositionParams struct {
@@ -229,7 +330,24 @@ type UpdateRolePositionParams struct {
 	Position pgtype.Int4 `json:"position"`
 }
 
-func (q *Queries) UpdateRolePosition(ctx context.Context, arg UpdateRolePositionParams) error {
-	_, err := q.db.Exec(ctx, updateRolePosition, arg.ID, arg.Position)
-	return err
+func (q *Queries) UpdateRolePosition(ctx context.Context, arg UpdateRolePositionParams) (Role, error) {
+	row := q.db.QueryRow(ctx, updateRolePosition, arg.ID, arg.Position)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.Name,
+		&i.Color,
+		&i.Hoist,
+		&i.Position,
+		&i.Permissions,
+		&i.Mentionable,
+		&i.Icon,
+		&i.Description,
+		&i.IsDefault,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

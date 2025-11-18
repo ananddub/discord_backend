@@ -22,9 +22,8 @@ func NewMessageController(messageService *messageService.MessageService) *messag
 	return &grpcController
 }
 
-// SendMessage sends a new message
 func (c *MessageController) SendMessage(ctx context.Context, req *messagePb.SendMessageRequest) (*messagePb.SendMessageResponse, error) {
-	// Get user ID from context
+
 	userID := ctx.Value("user_id").(int32)
 
 	if req.GetChannelId() == 0 || req.GetContent() == "" {
@@ -45,7 +44,7 @@ func (c *MessageController) SendMessage(ctx context.Context, req *messagePb.Send
 	return &messagePb.SendMessageResponse{
 		Message: &schema.Message{
 			Id:        message.ID,
-			ChannelId: message.ChannelID,
+			ChannelId: message.ChannelID.Int32,
 			SenderId:  message.SenderID,
 			Content:   message.Content,
 			IsEdited:  message.IsEdited.Bool,
@@ -56,7 +55,6 @@ func (c *MessageController) SendMessage(ctx context.Context, req *messagePb.Send
 	}, nil
 }
 
-// GetMessages retrieves messages (streaming response)
 func (c *MessageController) GetMessages(req *messagePb.GetMessagesRequest, stream messagePb.MessageService_GetMessagesServer) error {
 	ctx := stream.Context()
 
@@ -78,7 +76,7 @@ func (c *MessageController) GetMessages(req *messagePb.GetMessagesRequest, strea
 	for _, msg := range messages {
 		pbMsg := &schema.Message{
 			Id:        msg.ID,
-			ChannelId: msg.ChannelID,
+			ChannelId: msg.ChannelID.Int32,
 			SenderId:  msg.SenderID,
 			Content:   msg.Content,
 			IsEdited:  msg.IsEdited.Bool,
@@ -109,7 +107,7 @@ func (c *MessageController) GetMessage(ctx context.Context, req *messagePb.GetMe
 
 	return &messagePb.GetMessageResponse{
 		Id:        message.ID,
-		ChannelId: message.ChannelID,
+		ChannelId: message.ChannelID.Int32,
 		SenderId:  message.SenderID,
 		Content:   message.Content,
 		IsEdited:  message.IsEdited.Bool,
@@ -117,9 +115,8 @@ func (c *MessageController) GetMessage(ctx context.Context, req *messagePb.GetMe
 	}, nil
 }
 
-// EditMessage edits an existing message
 func (c *MessageController) EditMessage(ctx context.Context, req *messagePb.EditMessageRequest) (*messagePb.EditMessageResponse, error) {
-	// Get user ID from context
+
 	userID := ctx.Value("user_id").(int32)
 
 	if req.GetMessageId() == 0 || req.GetContent() == "" {
@@ -134,7 +131,7 @@ func (c *MessageController) EditMessage(ctx context.Context, req *messagePb.Edit
 	return &messagePb.EditMessageResponse{
 		Message: &schema.Message{
 			Id:        message.ID,
-			ChannelId: message.ChannelID,
+			ChannelId: message.ChannelID.Int32,
 			SenderId:  message.SenderID,
 			Content:   message.Content,
 			IsEdited:  message.IsEdited.Bool,
@@ -146,7 +143,7 @@ func (c *MessageController) EditMessage(ctx context.Context, req *messagePb.Edit
 
 // DeleteMessage deletes a message
 func (c *MessageController) DeleteMessage(ctx context.Context, req *messagePb.DeleteMessageRequest) (*messagePb.DeleteMessageResponse, error) {
-	// Get user ID from context
+
 	userID := ctx.Value("user_id").(int32)
 
 	if req.GetMessageId() == 0 {
@@ -218,9 +215,8 @@ func (c *MessageController) GetPinnedMessages(ctx context.Context, req *messageP
 	}, nil
 }
 
-// AddReaction adds a reaction to a message
 func (c *MessageController) AddReaction(ctx context.Context, req *messagePb.AddReactionRequest) (*messagePb.AddReactionResponse, error) {
-	// Get user ID from context
+
 	userID := ctx.Value("user_id").(int32)
 
 	if req.GetMessageId() == 0 || req.GetEmoji() == "" {
@@ -239,7 +235,7 @@ func (c *MessageController) AddReaction(ctx context.Context, req *messagePb.AddR
 
 // RemoveReaction removes a reaction from a message
 func (c *MessageController) RemoveReaction(ctx context.Context, req *messagePb.RemoveReactionRequest) (*messagePb.RemoveReactionResponse, error) {
-	// Get user ID from context
+
 	userID := ctx.Value("user_id").(int32)
 
 	if req.GetMessageId() == 0 || req.GetEmoji() == "" {
@@ -350,7 +346,7 @@ func (c *MessageController) SearchMessages(ctx context.Context, req *messagePb.S
 	for i, msg := range messages {
 		results[i] = &messagePb.MessageSearchResult{
 			MessageId: msg.ID,
-			ChannelId: msg.ChannelID,
+			ChannelId: msg.ChannelID.Int32,
 			SenderId:  msg.SenderID,
 			Content:   msg.Content,
 			CreatedAt: msg.CreatedAt.Time.Unix(),

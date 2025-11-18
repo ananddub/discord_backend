@@ -12,7 +12,7 @@ service MessageService {
   rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
   rpc EditMessage(EditMessageRequest) returns (EditMessageResponse);
   rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
-  
+
   // Message Interactions
   rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
   rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse);
@@ -20,10 +20,10 @@ service MessageService {
   rpc AddReaction(AddReactionRequest) returns (AddReactionResponse);
   rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse);
   rpc GetReactions(GetReactionsRequest) returns (GetReactionsResponse);
-  
+
   // Typing Indicator
   rpc SendTyping(SendTypingRequest) returns (SendTypingResponse);
-  
+
   // Bulk Operations
   rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse);
   rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);

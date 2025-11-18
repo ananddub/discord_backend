@@ -21,12 +21,10 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		// Skip auth for public endpoints
 		if isPublicEndpoint(info.FullMethod) {
 			return handler(ctx, req)
 		}
 
-		// Extract token from metadata
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			return nil, status.Error(codes.Unauthenticated, "missing metadata")
@@ -37,22 +35,61 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.Unauthenticated, "missing authorization header")
 		}
 
-		// Extract token from "Bearer <token>"
 		token := strings.TrimPrefix(authHeader[0], "Bearer ")
 		if token == authHeader[0] {
 			return nil, status.Error(codes.Unauthenticated, "invalid authorization format")
 		}
 
-		// Validate token
 		userID, err := util.ValidateJWT(token)
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, "invalid or expired token")
 		}
 
-		// Add user ID to context
 		ctx = context.WithValue(ctx, "user_id", userID)
 
 		return handler(ctx, req)
+	}
+}
+
+func StreamAuthInterceptor() grpc.StreamServerInterceptor {
+	return func(
+		srv interface{},
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		if isPublicEndpoint(info.FullMethod) {
+			return handler(srv, ss)
+		}
+
+		md, ok := metadata.FromIncomingContext(ss.Context())
+		if !ok {
+			return status.Error(codes.Unauthenticated, "missing metadata")
+		}
+
+		authHeader := md.Get("authorization")
+		if len(authHeader) == 0 {
+			return status.Error(codes.Unauthenticated, "missing authorization header")
+		}
+
+		token := strings.TrimPrefix(authHeader[0], "Bearer ")
+		if token == authHeader[0] {
+			return status.Error(codes.Unauthenticated, "invalid authorization format")
+		}
+
+		userID, err := util.ValidateJWT(token)
+		if err != nil {
+			return status.Error(codes.Unauthenticated, "invalid or expired token")
+		}
+
+		newCtx := context.WithValue(ss.Context(), "user_id", userID)
+
+		wrapped := &WrappedServerStream{
+			ServerStream: ss,
+			ctx:          newCtx,
+		}
+
+		return handler(srv, wrapped)
 	}
 }
 
@@ -71,6 +108,16 @@ func isPublicEndpoint(method string) bool {
 		}
 	}
 	return false
+}
+
+// WrappedServerStream wraps grpc.ServerStream with a custom context
+type WrappedServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (w *WrappedServerStream) Context() context.Context {
+	return w.ctx
 }
 
 // GetUserIDFromContext extracts user ID from context

@@ -14,8 +14,9 @@ import (
 const countUpdatedChannels = `-- name: CountUpdatedChannels :one
 SELECT COUNT(*) as total
 FROM channels c
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND c.updated_at > $2
 `
 
@@ -35,7 +36,8 @@ func (q *Queries) CountUpdatedChannels(ctx context.Context, arg CountUpdatedChan
 const countUpdatedFriends = `-- name: CountUpdatedFriends :one
 SELECT COUNT(*) as total
 FROM friends
-WHERE user_id = $1 
+WHERE
+    user_id = $1
     AND updated_at > $2
 `
 
@@ -54,10 +56,12 @@ func (q *Queries) CountUpdatedFriends(ctx context.Context, arg CountUpdatedFrien
 
 const countUpdatedMessages = `-- name: CountUpdatedMessages :one
 SELECT COUNT(*) as total
-FROM messages m
-INNER JOIN channels c ON m.channel_id = c.id
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
+FROM
+    messages m
+    INNER JOIN channels c ON m.channel_id = c.id
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND m.updated_at > $2
 `
 
@@ -77,8 +81,9 @@ func (q *Queries) CountUpdatedMessages(ctx context.Context, arg CountUpdatedMess
 const countUpdatedServers = `-- name: CountUpdatedServers :one
 SELECT COUNT(*) as total
 FROM servers s
-INNER JOIN server_members sm ON s.id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON s.id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND s.updated_at > $2
 `
 
@@ -96,7 +101,7 @@ func (q *Queries) CountUpdatedServers(ctx context.Context, arg CountUpdatedServe
 }
 
 const getServerTimestamp = `-- name: GetServerTimestamp :one
-SELECT EXTRACT(EPOCH FROM NOW()) * 1000 as server_timestamp
+SELECT EXTRACT( EPOCH FROM NOW() ) * 1000 as server_timestamp
 `
 
 // Get current server timestamp for sync
@@ -108,9 +113,7 @@ func (q *Queries) GetServerTimestamp(ctx context.Context) (int32, error) {
 }
 
 const getUserLastUpdate = `-- name: GetUserLastUpdate :one
-SELECT updated_at
-FROM users
-WHERE id = $1
+SELECT updated_at FROM users WHERE id = $1
 `
 
 // Get user's last profile update timestamp
@@ -122,17 +125,11 @@ func (q *Queries) GetUserLastUpdate(ctx context.Context, id int32) (pgtype.Times
 }
 
 const syncBans = `-- name: SyncBans :many
-SELECT 
-    b.id,
-    b.server_id,
-    b.user_id,
-    b.moderator_id,
-    b.reason,
-    b.expires_at,
-    b.created_at
+SELECT b.id, b.server_id, b.user_id, b.moderator_id, b.reason, b.expires_at, b.created_at
 FROM bans b
-INNER JOIN server_members sm ON b.server_id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON b.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND b.created_at > $2
 ORDER BY b.created_at DESC
 `
@@ -182,24 +179,11 @@ func (q *Queries) SyncBans(ctx context.Context, arg SyncBansParams) ([]SyncBansR
 }
 
 const syncChannels = `-- name: SyncChannels :many
-SELECT 
-    c.id,
-    c.server_id,
-    c.category_id,
-    c.name,
-    c.type,
-    c.position,
-    c.topic,
-    c.is_nsfw,
-    c.slowmode_delay,
-    c.user_limit,
-    c.bitrate,
-    c.is_private,
-    c.created_at,
-    c.updated_at
+SELECT c.id, c.server_id, c.category_id, c.name, c.type, c.position, c.topic, c.is_nsfw, c.slowmode_delay, c.user_limit, c.bitrate, c.is_private, c.created_at, c.updated_at
 FROM channels c
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND c.updated_at > $2
 ORDER BY c.server_id, c.position
 `
@@ -263,7 +247,7 @@ func (q *Queries) SyncChannels(ctx context.Context, arg SyncChannelsParams) ([]S
 }
 
 const syncDeletedFriends = `-- name: SyncDeletedFriends :many
-SELECT id FROM friends WHERE 1=0
+SELECT id FROM friends WHERE 1 = 0
 `
 
 // Get deleted friendships (track separately in audit or use soft delete)
@@ -288,79 +272,8 @@ func (q *Queries) SyncDeletedFriends(ctx context.Context) ([]int32, error) {
 	return items, nil
 }
 
-const syncDirectMessages = `-- name: SyncDirectMessages :many
-SELECT 
-    dc.id,
-    dc.name,
-    dc.icon,
-    dc.owner_id,
-    dc.is_group,
-    dc.last_message_id,
-    dc.last_message_at,
-    dc.created_at
-FROM dm_channels dc
-INNER JOIN dm_participants dp ON dc.id = dp.dm_channel_id
-WHERE dp.user_id = $1
-    AND (dc.last_message_at > $2 OR dc.created_at > $2)
-ORDER BY dc.last_message_at DESC NULLS LAST
-LIMIT $3 OFFSET $4
-`
-
-type SyncDirectMessagesParams struct {
-	UserID        int32            `json:"user_id"`
-	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
-	Limit         int32            `json:"limit"`
-	Offset        int32            `json:"offset"`
-}
-
-type SyncDirectMessagesRow struct {
-	ID            int32            `json:"id"`
-	Name          pgtype.Text      `json:"name"`
-	Icon          pgtype.Text      `json:"icon"`
-	OwnerID       pgtype.Int4      `json:"owner_id"`
-	IsGroup       pgtype.Bool      `json:"is_group"`
-	LastMessageID pgtype.Int4      `json:"last_message_id"`
-	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-}
-
-// Get DM channels user is part of
-func (q *Queries) SyncDirectMessages(ctx context.Context, arg SyncDirectMessagesParams) ([]SyncDirectMessagesRow, error) {
-	rows, err := q.db.Query(ctx, syncDirectMessages,
-		arg.UserID,
-		arg.LastMessageAt,
-		arg.Limit,
-		arg.Offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []SyncDirectMessagesRow
-	for rows.Next() {
-		var i SyncDirectMessagesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Icon,
-			&i.OwnerID,
-			&i.IsGroup,
-			&i.LastMessageID,
-			&i.LastMessageAt,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const syncFriends = `-- name: SyncFriends :many
-SELECT 
+SELECT
     f.id,
     f.user_id,
     f.friend_id,
@@ -385,11 +298,14 @@ SELECT
     u.created_at as friend_created_at,
     u.updated_at as friend_updated_at
 FROM friends f
-LEFT JOIN users u ON f.friend_id = u.id
-WHERE f.user_id = $1 
+    LEFT JOIN users u ON f.friend_id = u.id
+WHERE
+    f.user_id = $1
     AND f.updated_at > $2
 ORDER BY f.updated_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $3
+OFFSET
+    $4
 `
 
 type SyncFriendsParams struct {
@@ -476,21 +392,11 @@ func (q *Queries) SyncFriends(ctx context.Context, arg SyncFriendsParams) ([]Syn
 }
 
 const syncInvites = `-- name: SyncInvites :many
-SELECT 
-    i.id,
-    i.code,
-    i.server_id,
-    i.channel_id,
-    i.inviter_id,
-    i.max_uses,
-    i.uses,
-    i.max_age,
-    i.temporary,
-    i.created_at,
-    i.expires_at
+SELECT i.id, i.code, i.server_id, i.channel_id, i.inviter_id, i.max_uses, i.uses, i.max_age, i.temporary, i.created_at, i.expires_at
 FROM invites i
-INNER JOIN server_members sm ON i.server_id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON i.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND i.created_at > $2
 ORDER BY i.created_at DESC
 `
@@ -548,18 +454,10 @@ func (q *Queries) SyncInvites(ctx context.Context, arg SyncInvitesParams) ([]Syn
 }
 
 const syncMessageAttachments = `-- name: SyncMessageAttachments :many
-SELECT 
-    ma.id,
-    ma.message_id,
-    ma.file_name,
-    ma.file_url,
-    ma.file_size,
-    ma.file_type,
-    ma.width,
-    ma.height,
-    ma.created_at
+SELECT ma.id, ma.message_id, ma.file_name, ma.file_url, ma.file_size, ma.file_type, ma.width, ma.height, ma.created_at
 FROM message_attachments ma
-WHERE ma.message_id = ANY($1::int[])
+WHERE
+    ma.message_id = ANY ($1::int[])
 ORDER BY ma.message_id, ma.id
 `
 
@@ -607,14 +505,10 @@ func (q *Queries) SyncMessageAttachments(ctx context.Context, dollar_1 []int32) 
 }
 
 const syncMessageReactions = `-- name: SyncMessageReactions :many
-SELECT 
-    mr.id,
-    mr.message_id,
-    mr.user_id,
-    mr.emoji,
-    mr.created_at
+SELECT mr.id, mr.message_id, mr.user_id, mr.emoji, mr.created_at
 FROM message_reactions mr
-WHERE mr.message_id = ANY($1::int[])
+WHERE
+    mr.message_id = ANY ($1::int[])
 ORDER BY mr.message_id, mr.created_at
 `
 
@@ -654,7 +548,7 @@ func (q *Queries) SyncMessageReactions(ctx context.Context, dollar_1 []int32) ([
 }
 
 const syncMessages = `-- name: SyncMessages :many
-SELECT 
+SELECT
     m.id,
     m.channel_id,
     m.sender_id,
@@ -670,15 +564,18 @@ SELECT
     u.username as sender_username,
     u.profile_pic as sender_profile_pic
 FROM messages m
-LEFT JOIN users u ON m.sender_id = u.id
-WHERE m.channel_id = $1
+    LEFT JOIN users u ON m.sender_id = u.id
+WHERE
+    m.channel_id = $1
     AND m.updated_at > $2
 ORDER BY m.created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $3
+OFFSET
+    $4
 `
 
 type SyncMessagesParams struct {
-	ChannelID int32            `json:"channel_id"`
+	ChannelID pgtype.Int4      `json:"channel_id"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 	Limit     int32            `json:"limit"`
 	Offset    int32            `json:"offset"`
@@ -686,7 +583,7 @@ type SyncMessagesParams struct {
 
 type SyncMessagesRow struct {
 	ID               int32            `json:"id"`
-	ChannelID        int32            `json:"channel_id"`
+	ChannelID        pgtype.Int4      `json:"channel_id"`
 	SenderID         int32            `json:"sender_id"`
 	Content          string           `json:"content"`
 	MessageType      pgtype.Text      `json:"message_type"`
@@ -743,7 +640,7 @@ func (q *Queries) SyncMessages(ctx context.Context, arg SyncMessagesParams) ([]S
 }
 
 const syncPendingFriendRequests = `-- name: SyncPendingFriendRequests :many
-SELECT 
+SELECT
     f.id,
     f.user_id,
     f.friend_id,
@@ -757,8 +654,9 @@ SELECT
     u.profile_pic as requester_profile_pic,
     u.status as requester_status
 FROM friends f
-LEFT JOIN users u ON f.user_id = u.id
-WHERE f.friend_id = $1 
+    LEFT JOIN users u ON f.user_id = u.id
+WHERE
+    f.friend_id = $1
     AND f.status = 'pending'
     AND f.updated_at > $2
 ORDER BY f.created_at DESC
@@ -821,18 +719,13 @@ func (q *Queries) SyncPendingFriendRequests(ctx context.Context, arg SyncPending
 }
 
 const syncPermissions = `-- name: SyncPermissions :many
-SELECT 
-    cp.id,
-    cp.channel_id,
-    cp.role_id,
-    cp.user_id,
-    cp.allow_permissions,
-    cp.deny_permissions,
-    cp.created_at
-FROM channel_permissions cp
-INNER JOIN channels c ON cp.channel_id = c.id
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
+SELECT cp.id, cp.channel_id, cp.role_id, cp.user_id, cp.allow_permissions, cp.deny_permissions, cp.created_at
+FROM
+    channel_permissions cp
+    INNER JOIN channels c ON cp.channel_id = c.id
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND cp.created_at > $2
 ORDER BY cp.created_at DESC
 `
@@ -882,18 +775,11 @@ func (q *Queries) SyncPermissions(ctx context.Context, arg SyncPermissionsParams
 }
 
 const syncServerMembers = `-- name: SyncServerMembers :many
-SELECT 
-    sm.id,
-    sm.server_id,
-    sm.user_id,
-    sm.nickname,
-    sm.joined_at,
-    u.username,
-    u.profile_pic,
-    u.status
+SELECT sm.id, sm.server_id, sm.user_id, sm.nickname, sm.joined_at, u.username, u.profile_pic, u.status
 FROM server_members sm
-LEFT JOIN users u ON sm.user_id = u.id
-WHERE sm.server_id = $1
+    LEFT JOIN users u ON sm.user_id = u.id
+WHERE
+    sm.server_id = $1
     AND sm.joined_at > $2
 ORDER BY sm.joined_at DESC
 `
@@ -945,22 +831,11 @@ func (q *Queries) SyncServerMembers(ctx context.Context, arg SyncServerMembersPa
 }
 
 const syncServers = `-- name: SyncServers :many
-SELECT 
-    s.id,
-    s.name,
-    s.icon,
-    s.banner,
-    s.description,
-    s.owner_id,
-    s.region,
-    s.member_count,
-    s.is_verified,
-    s.vanity_url,
-    s.created_at,
-    s.updated_at
+SELECT s.id, s.name, s.icon, s.banner, s.description, s.owner_id, s.region, s.member_count, s.is_verified, s.vanity_url, s.created_at, s.updated_at
 FROM servers s
-INNER JOIN server_members sm ON s.id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON s.id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND s.updated_at > $2
 ORDER BY s.updated_at DESC
 `
@@ -1020,23 +895,16 @@ func (q *Queries) SyncServers(ctx context.Context, arg SyncServersParams) ([]Syn
 }
 
 const syncTextChannels = `-- name: SyncTextChannels :many
-SELECT 
-    c.id,
-    c.server_id,
-    c.category_id,
-    c.name,
-    c.type,
-    c.position,
-    c.topic,
-    c.is_nsfw,
-    c.slowmode_delay,
-    c.is_private,
-    c.created_at,
-    c.updated_at
+SELECT c.id, c.server_id, c.category_id, c.name, c.type, c.position, c.topic, c.is_nsfw, c.slowmode_delay, c.is_private, c.created_at, c.updated_at
 FROM channels c
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
-    AND c.type IN ('text', 'announcement', 'forum')
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
+    AND c.type IN (
+        'text',
+        'announcement',
+        'forum'
+    )
     AND c.updated_at > $2
 ORDER BY c.server_id, c.position
 `
@@ -1096,26 +964,18 @@ func (q *Queries) SyncTextChannels(ctx context.Context, arg SyncTextChannelsPara
 }
 
 const syncUserMessages = `-- name: SyncUserMessages :many
-SELECT 
-    m.id,
-    m.channel_id,
-    m.sender_id,
-    m.content,
-    m.message_type,
-    m.reply_to_message_id,
-    m.is_edited,
-    m.is_pinned,
-    m.mention_everyone,
-    m.created_at,
-    m.updated_at,
-    m.edited_at
-FROM messages m
-INNER JOIN channels c ON m.channel_id = c.id
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
+SELECT m.id, m.channel_id, m.sender_id, m.content, m.message_type, m.reply_to_message_id, m.is_edited, m.is_pinned, m.mention_everyone, m.created_at, m.updated_at, m.edited_at
+FROM
+    messages m
+    INNER JOIN channels c ON m.channel_id = c.id
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND m.updated_at > $2
 ORDER BY m.created_at DESC
-LIMIT $3 OFFSET $4
+LIMIT $3
+OFFSET
+    $4
 `
 
 type SyncUserMessagesParams struct {
@@ -1127,7 +987,7 @@ type SyncUserMessagesParams struct {
 
 type SyncUserMessagesRow struct {
 	ID               int32            `json:"id"`
-	ChannelID        int32            `json:"channel_id"`
+	ChannelID        pgtype.Int4      `json:"channel_id"`
 	SenderID         int32            `json:"sender_id"`
 	Content          string           `json:"content"`
 	MessageType      pgtype.Text      `json:"message_type"`
@@ -1180,7 +1040,7 @@ func (q *Queries) SyncUserMessages(ctx context.Context, arg SyncUserMessagesPara
 }
 
 const syncUserProfile = `-- name: SyncUserProfile :one
-SELECT 
+SELECT
     id,
     username,
     email,
@@ -1198,7 +1058,8 @@ SELECT
     created_at,
     updated_at
 FROM users
-WHERE id = $1
+WHERE
+    id = $1
     AND updated_at > $2
 `
 
@@ -1252,22 +1113,11 @@ func (q *Queries) SyncUserProfile(ctx context.Context, arg SyncUserProfileParams
 }
 
 const syncVoiceChannels = `-- name: SyncVoiceChannels :many
-SELECT 
-    c.id,
-    c.server_id,
-    c.category_id,
-    c.name,
-    c.type,
-    c.position,
-    c.topic,
-    c.user_limit,
-    c.bitrate,
-    c.is_private,
-    c.created_at,
-    c.updated_at
+SELECT c.id, c.server_id, c.category_id, c.name, c.type, c.position, c.topic, c.user_limit, c.bitrate, c.is_private, c.created_at, c.updated_at
 FROM channels c
-INNER JOIN server_members sm ON c.server_id = sm.server_id
-WHERE sm.user_id = $1
+    INNER JOIN server_members sm ON c.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND c.type IN ('voice', 'stage')
     AND c.updated_at > $2
 ORDER BY c.server_id, c.position
@@ -1328,23 +1178,12 @@ func (q *Queries) SyncVoiceChannels(ctx context.Context, arg SyncVoiceChannelsPa
 }
 
 const syncVoiceStates = `-- name: SyncVoiceStates :many
-SELECT 
-    vs.id,
-    vs.user_id,
-    vs.channel_id,
-    vs.server_id,
-    vs.session_id,
-    vs.is_muted,
-    vs.is_deafened,
-    vs.self_mute,
-    vs.self_deaf,
-    vs.self_video,
-    vs.self_stream,
-    vs.suppress,
-    vs.joined_at
-FROM voice_states vs
-INNER JOIN server_members sm ON vs.server_id = sm.server_id
-WHERE sm.user_id = $1
+SELECT vs.id, vs.user_id, vs.channel_id, vs.server_id, vs.session_id, vs.is_muted, vs.is_deafened, vs.self_mute, vs.self_deaf, vs.self_video, vs.self_stream, vs.suppress, vs.joined_at
+FROM
+    voice_states vs
+    INNER JOIN server_members sm ON vs.server_id = sm.server_id
+WHERE
+    sm.user_id = $1
     AND vs.joined_at > $2
 ORDER BY vs.joined_at DESC
 `

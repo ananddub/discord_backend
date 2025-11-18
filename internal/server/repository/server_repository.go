@@ -85,7 +85,8 @@ func (r *ServerRepository) UpdateServer(ctx context.Context, serverID int32, nam
 
 // DeleteServer deletes a server
 func (r *ServerRepository) DeleteServer(ctx context.Context, serverID int32) error {
-	return r.queries.SoftDeleteServer(ctx, serverID)
+	_, err := r.queries.SoftDeleteServer(ctx, serverID)
+	return err
 }
 
 // GetUserServers retrieves all servers a user is a member of
@@ -95,12 +96,14 @@ func (r *ServerRepository) GetUserServers(ctx context.Context, userID int32) ([]
 
 // IncrementMemberCount increments the server member count
 func (r *ServerRepository) IncrementMemberCount(ctx context.Context, serverID int32) error {
-	return r.queries.IncrementMemberCount(ctx, serverID)
+	_, err := r.queries.IncrementMemberCount(ctx, serverID)
+	return err
 }
 
 // DecrementMemberCount decrements the server member count
 func (r *ServerRepository) DecrementMemberCount(ctx context.Context, serverID int32) error {
-	return r.queries.DecrementMemberCount(ctx, serverID)
+	_, err := r.queries.DecrementMemberCount(ctx, serverID)
+	return err
 }
 
 // GetServersByOwner retrieves servers owned by a user
@@ -110,10 +113,11 @@ func (r *ServerRepository) GetServersByOwner(ctx context.Context, ownerID int32)
 
 // UpdateServerOwner updates the server owner
 func (r *ServerRepository) UpdateServerOwner(ctx context.Context, serverID, newOwnerID int32) error {
-	return r.queries.UpdateServerOwner(ctx, repo.UpdateServerOwnerParams{
+	_, err := r.queries.UpdateServerOwner(ctx, repo.UpdateServerOwnerParams{
 		ID:      serverID,
 		OwnerID: newOwnerID,
 	})
+	return err
 }
 
 // AddServerMember adds a member to a server
@@ -154,19 +158,21 @@ func (r *ServerRepository) UpdateMemberNickname(ctx context.Context, serverID, u
 		nicknameType = pgtype.Text{String: *nickname, Valid: true}
 	}
 
-	return r.queries.UpdateMemberNickname(ctx, repo.UpdateMemberNicknameParams{
+	_, err := r.queries.UpdateMemberNickname(ctx, repo.UpdateMemberNicknameParams{
 		ServerID: serverID,
 		UserID:   userID,
 		Nickname: nicknameType,
 	})
+	return err
 }
 
 // RemoveServerMember removes a member from a server
 func (r *ServerRepository) RemoveServerMember(ctx context.Context, serverID, userID int32) error {
-	return r.queries.RemoveServerMember(ctx, repo.RemoveServerMemberParams{
+	_, err := r.queries.RemoveServerMember(ctx, repo.RemoveServerMemberParams{
 		ServerID: serverID,
 		UserID:   userID,
 	})
+	return err
 }
 
 // CountServerMembers counts the number of members in a server
@@ -207,7 +213,8 @@ func (r *ServerRepository) GetServerRoles(ctx context.Context, serverID int32) (
 
 // DeleteRole deletes a role
 func (r *ServerRepository) DeleteRole(ctx context.Context, roleID int32) error {
-	return r.queries.SoftDeleteRole(ctx, roleID)
+	_, err := r.queries.SoftDeleteRole(ctx, roleID)
+	return err
 }
 
 // CreateInvite creates a server invite
@@ -241,12 +248,14 @@ func (r *ServerRepository) GetServerInvites(ctx context.Context, serverID int32)
 
 // IncrementInviteUses increments the invite usage count
 func (r *ServerRepository) IncrementInviteUses(ctx context.Context, code string) error {
-	return r.queries.IncrementInviteUses(ctx, code)
+	_, err := r.queries.IncrementInviteUses(ctx, code)
+	return err
 }
 
 // DeleteInvite deletes an invite
 func (r *ServerRepository) DeleteInvite(ctx context.Context, code string) error {
-	return r.queries.SoftDeleteInvite(ctx, code)
+	_, err := r.queries.SoftDeleteInvite(ctx, code)
+	return err
 }
 
 // CreateBan creates a ban
@@ -283,10 +292,11 @@ func (r *ServerRepository) GetServerBans(ctx context.Context, serverID int32) ([
 
 // DeleteBan removes a ban
 func (r *ServerRepository) DeleteBan(ctx context.Context, serverID, userID int32) error {
-	return r.queries.SoftDeleteBan(ctx, repo.SoftDeleteBanParams{
+	_, err := r.queries.SoftDeleteBan(ctx, repo.SoftDeleteBanParams{
 		ServerID: serverID,
 		UserID:   userID,
 	})
+	return err
 }
 
 // IsUserBanned checks if a user is banned

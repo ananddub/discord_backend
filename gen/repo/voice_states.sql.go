@@ -12,11 +12,29 @@ import (
 )
 
 const createVoiceState = `-- name: CreateVoiceState :one
-INSERT INTO voice_states (
-    user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf
-) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
-) RETURNING id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
+INSERT INTO
+    voice_states (
+        user_id,
+        channel_id,
+        server_id,
+        session_id,
+        is_muted,
+        is_deafened,
+        self_mute,
+        self_deaf
+    )
+VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8
+    )
+RETURNING
+    id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
 `
 
 type CreateVoiceStateParams struct {
@@ -61,19 +79,39 @@ func (q *Queries) CreateVoiceState(ctx context.Context, arg CreateVoiceStatePara
 	return i, err
 }
 
-const deleteUserVoiceStates = `-- name: DeleteUserVoiceStates :exec
-DELETE FROM voice_states
-WHERE user_id = $1
+const deleteUserVoiceStates = `-- name: DeleteUserVoiceStates :one
+DELETE FROM voice_states WHERE user_id = $1 RETURNING id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
 `
 
-func (q *Queries) DeleteUserVoiceStates(ctx context.Context, userID int32) error {
-	_, err := q.db.Exec(ctx, deleteUserVoiceStates, userID)
-	return err
+func (q *Queries) DeleteUserVoiceStates(ctx context.Context, userID int32) (VoiceState, error) {
+	row := q.db.QueryRow(ctx, deleteUserVoiceStates, userID)
+	var i VoiceState
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ChannelID,
+		&i.ServerID,
+		&i.SessionID,
+		&i.IsMuted,
+		&i.IsDeafened,
+		&i.SelfMute,
+		&i.SelfDeaf,
+		&i.SelfVideo,
+		&i.SelfStream,
+		&i.Suppress,
+		&i.JoinedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const deleteVoiceState = `-- name: DeleteVoiceState :exec
+const deleteVoiceState = `-- name: DeleteVoiceState :one
 DELETE FROM voice_states
-WHERE user_id = $1 AND channel_id = $2
+WHERE
+    user_id = $1
+    AND channel_id = $2
+RETURNING
+    id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
 `
 
 type DeleteVoiceStateParams struct {
@@ -81,14 +119,30 @@ type DeleteVoiceStateParams struct {
 	ChannelID int32 `json:"channel_id"`
 }
 
-func (q *Queries) DeleteVoiceState(ctx context.Context, arg DeleteVoiceStateParams) error {
-	_, err := q.db.Exec(ctx, deleteVoiceState, arg.UserID, arg.ChannelID)
-	return err
+func (q *Queries) DeleteVoiceState(ctx context.Context, arg DeleteVoiceStateParams) (VoiceState, error) {
+	row := q.db.QueryRow(ctx, deleteVoiceState, arg.UserID, arg.ChannelID)
+	var i VoiceState
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ChannelID,
+		&i.ServerID,
+		&i.SessionID,
+		&i.IsMuted,
+		&i.IsDeafened,
+		&i.SelfMute,
+		&i.SelfDeaf,
+		&i.SelfVideo,
+		&i.SelfStream,
+		&i.Suppress,
+		&i.JoinedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getChannelVoiceStates = `-- name: GetChannelVoiceStates :many
-SELECT id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at FROM voice_states
-WHERE channel_id = $1
+SELECT id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at FROM voice_states WHERE channel_id = $1
 `
 
 func (q *Queries) GetChannelVoiceStates(ctx context.Context, channelID int32) ([]VoiceState, error) {
@@ -127,8 +181,7 @@ func (q *Queries) GetChannelVoiceStates(ctx context.Context, channelID int32) ([
 }
 
 const getUserVoiceState = `-- name: GetUserVoiceState :one
-SELECT id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at FROM voice_states
-WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at FROM voice_states WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserVoiceState(ctx context.Context, userID int32) (VoiceState, error) {
@@ -154,8 +207,12 @@ func (q *Queries) GetUserVoiceState(ctx context.Context, userID int32) (VoiceSta
 }
 
 const getVoiceState = `-- name: GetVoiceState :one
-SELECT id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at FROM voice_states
-WHERE user_id = $1 AND channel_id = $2 LIMIT 1
+SELECT id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
+FROM voice_states
+WHERE
+    user_id = $1
+    AND channel_id = $2
+LIMIT 1
 `
 
 type GetVoiceStateParams struct {
@@ -187,16 +244,37 @@ func (q *Queries) GetVoiceState(ctx context.Context, arg GetVoiceStateParams) (V
 
 const updateVoiceState = `-- name: UpdateVoiceState :one
 UPDATE voice_states
-SET 
-    is_muted = COALESCE($1, is_muted),
-    is_deafened = COALESCE($2, is_deafened),
-    self_mute = COALESCE($3, self_mute),
-    self_deaf = COALESCE($4, self_deaf),
-    self_video = COALESCE($5, self_video),
-    self_stream = COALESCE($6, self_stream),
+SET
+    is_muted = COALESCE(
+        $1,
+        is_muted
+    ),
+    is_deafened = COALESCE(
+        $2,
+        is_deafened
+    ),
+    self_mute = COALESCE(
+        $3,
+        self_mute
+    ),
+    self_deaf = COALESCE(
+        $4,
+        self_deaf
+    ),
+    self_video = COALESCE(
+        $5,
+        self_video
+    ),
+    self_stream = COALESCE(
+        $6,
+        self_stream
+    ),
     updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $7 AND channel_id = $8
-RETURNING id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
+WHERE
+    user_id = $7
+    AND channel_id = $8
+RETURNING
+    id, user_id, channel_id, server_id, session_id, is_muted, is_deafened, self_mute, self_deaf, self_video, self_stream, suppress, joined_at, updated_at
 `
 
 type UpdateVoiceStateParams struct {

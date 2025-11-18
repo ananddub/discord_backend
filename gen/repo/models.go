@@ -60,27 +60,6 @@ type ChannelPermission struct {
 	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
 }
 
-type DmChannel struct {
-	ID            int32            `json:"id"`
-	Name          pgtype.Text      `json:"name"`
-	Icon          pgtype.Text      `json:"icon"`
-	OwnerID       pgtype.Int4      `json:"owner_id"`
-	IsGroup       pgtype.Bool      `json:"is_group"`
-	LastMessageID pgtype.Int4      `json:"last_message_id"`
-	LastMessageAt pgtype.Timestamp `json:"last_message_at"`
-	IsDeleted     pgtype.Bool      `json:"is_deleted"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-}
-
-type DmParticipant struct {
-	ID                int32            `json:"id"`
-	DmChannelID       int32            `json:"dm_channel_id"`
-	UserID            int32            `json:"user_id"`
-	LastReadMessageID pgtype.Int4      `json:"last_read_message_id"`
-	JoinedAt          pgtype.Timestamp `json:"joined_at"`
-	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
-}
-
 type Emoji struct {
 	ID            int32            `json:"id"`
 	ServerID      int32            `json:"server_id"`
@@ -99,9 +78,12 @@ type Friend struct {
 	ID         int32            `json:"id"`
 	UserID     int32            `json:"user_id"`
 	FriendID   int32            `json:"friend_id"`
-	Status     string           `json:"status"`
 	AliasName  pgtype.Text      `json:"alias_name"`
+	IsPending  pgtype.Bool      `json:"is_pending"`
+	IsAccepted pgtype.Bool      `json:"is_accepted"`
+	IsBlocked  pgtype.Bool      `json:"is_blocked"`
 	IsFavorite pgtype.Bool      `json:"is_favorite"`
+	IsMuted    pgtype.Bool      `json:"is_muted"`
 	IsDeleted  pgtype.Bool      `json:"is_deleted"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
 	UpdatedAt  pgtype.Timestamp `json:"updated_at"`
@@ -132,7 +114,9 @@ type MemberRole struct {
 
 type Message struct {
 	ID               int32            `json:"id"`
-	ChannelID        int32            `json:"channel_id"`
+	ChannelID        pgtype.Int4      `json:"channel_id"`
+	ReceiverID       pgtype.Int4      `json:"receiver_id"`
+	Ischannel        pgtype.Bool      `json:"ischannel"`
 	SenderID         int32            `json:"sender_id"`
 	Content          string           `json:"content"`
 	MessageType      pgtype.Text      `json:"message_type"`

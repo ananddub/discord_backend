@@ -8,6 +8,7 @@ package friend
 
 import (
 	context "context"
+	schema "discord/gen/proto/schema"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -22,10 +23,12 @@ const (
 	FriendService_SendFriendRequest_FullMethodName   = "/protoservice.friend.FriendService/SendFriendRequest"
 	FriendService_AcceptFriendRequest_FullMethodName = "/protoservice.friend.FriendService/AcceptFriendRequest"
 	FriendService_RejectFriendRequest_FullMethodName = "/protoservice.friend.FriendService/RejectFriendRequest"
-	FriendService_BlockFriend_FullMethodName         = "/protoservice.friend.FriendService/BlockFriend"
-	FriendService_UnblockFriend_FullMethodName       = "/protoservice.friend.FriendService/UnblockFriend"
-	FriendService_UpdateAliasName_FullMethodName     = "/protoservice.friend.FriendService/UpdateAliasName"
-	FriendService_ListFreinds_FullMethodName         = "/protoservice.friend.FriendService/ListFreinds"
+	FriendService_RemoveFriend_FullMethodName        = "/protoservice.friend.FriendService/RemoveFriend"
+	FriendService_GetFriends_FullMethodName          = "/protoservice.friend.FriendService/GetFriends"
+	FriendService_GetPendingRequests_FullMethodName  = "/protoservice.friend.FriendService/GetPendingRequests"
+	FriendService_GetBlockedUsers_FullMethodName     = "/protoservice.friend.FriendService/GetBlockedUsers"
+	FriendService_SearchFriends_FullMethodName       = "/protoservice.friend.FriendService/SearchFriends"
+	FriendService_StreamFriendUpdates_FullMethodName = "/protoservice.friend.FriendService/StreamFriendUpdates"
 )
 
 // FriendServiceClient is the client API for FriendService service.
@@ -35,10 +38,15 @@ type FriendServiceClient interface {
 	SendFriendRequest(ctx context.Context, in *SendFriendRequestRequest, opts ...grpc.CallOption) (*SendFriendRequestResponse, error)
 	AcceptFriendRequest(ctx context.Context, in *AcceptFriendRequestRequest, opts ...grpc.CallOption) (*AcceptFriendRequestResponse, error)
 	RejectFriendRequest(ctx context.Context, in *RejectFriendRequestRequest, opts ...grpc.CallOption) (*RejectFriendRequestResponse, error)
-	BlockFriend(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockResponse, error)
-	UnblockFriend(ctx context.Context, in *UnblockRequest, opts ...grpc.CallOption) (*UnblockResponse, error)
-	UpdateAliasName(ctx context.Context, in *UpdateAliasNameRequest, opts ...grpc.CallOption) (*UpdateAliasNameResponse, error)
-	ListFreinds(ctx context.Context, in *GetFriendsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetFriendsResponse], error)
+	RemoveFriend(ctx context.Context, in *RemoveFriendRequest, opts ...grpc.CallOption) (*RemoveFriendResponse, error)
+	// Friend Lists
+	GetFriends(ctx context.Context, in *GetFriendsRequest, opts ...grpc.CallOption) (*GetFriendsResponse, error)
+	GetPendingRequests(ctx context.Context, in *GetPendingRequestsRequest, opts ...grpc.CallOption) (*GetPendingRequestsResponse, error)
+	GetBlockedUsers(ctx context.Context, in *GetBlockedUsersRequest, opts ...grpc.CallOption) (*GetBlockedUsersResponse, error)
+	// Friend Search
+	SearchFriends(ctx context.Context, in *SearchFriendsRequest, opts ...grpc.CallOption) (*SearchFriendsResponse, error)
+	// Streaming - Real-time friend updates
+	StreamFriendUpdates(ctx context.Context, in *StreamFriendUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[schema.Friend], error)
 }
 
 type friendServiceClient struct {
@@ -79,43 +87,63 @@ func (c *friendServiceClient) RejectFriendRequest(ctx context.Context, in *Rejec
 	return out, nil
 }
 
-func (c *friendServiceClient) BlockFriend(ctx context.Context, in *BlockRequest, opts ...grpc.CallOption) (*BlockResponse, error) {
+func (c *friendServiceClient) RemoveFriend(ctx context.Context, in *RemoveFriendRequest, opts ...grpc.CallOption) (*RemoveFriendResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BlockResponse)
-	err := c.cc.Invoke(ctx, FriendService_BlockFriend_FullMethodName, in, out, cOpts...)
+	out := new(RemoveFriendResponse)
+	err := c.cc.Invoke(ctx, FriendService_RemoveFriend_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *friendServiceClient) UnblockFriend(ctx context.Context, in *UnblockRequest, opts ...grpc.CallOption) (*UnblockResponse, error) {
+func (c *friendServiceClient) GetFriends(ctx context.Context, in *GetFriendsRequest, opts ...grpc.CallOption) (*GetFriendsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UnblockResponse)
-	err := c.cc.Invoke(ctx, FriendService_UnblockFriend_FullMethodName, in, out, cOpts...)
+	out := new(GetFriendsResponse)
+	err := c.cc.Invoke(ctx, FriendService_GetFriends_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *friendServiceClient) UpdateAliasName(ctx context.Context, in *UpdateAliasNameRequest, opts ...grpc.CallOption) (*UpdateAliasNameResponse, error) {
+func (c *friendServiceClient) GetPendingRequests(ctx context.Context, in *GetPendingRequestsRequest, opts ...grpc.CallOption) (*GetPendingRequestsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(UpdateAliasNameResponse)
-	err := c.cc.Invoke(ctx, FriendService_UpdateAliasName_FullMethodName, in, out, cOpts...)
+	out := new(GetPendingRequestsResponse)
+	err := c.cc.Invoke(ctx, FriendService_GetPendingRequests_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *friendServiceClient) ListFreinds(ctx context.Context, in *GetFriendsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GetFriendsResponse], error) {
+func (c *friendServiceClient) GetBlockedUsers(ctx context.Context, in *GetBlockedUsersRequest, opts ...grpc.CallOption) (*GetBlockedUsersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &FriendService_ServiceDesc.Streams[0], FriendService_ListFreinds_FullMethodName, cOpts...)
+	out := new(GetBlockedUsersResponse)
+	err := c.cc.Invoke(ctx, FriendService_GetBlockedUsers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[GetFriendsRequest, GetFriendsResponse]{ClientStream: stream}
+	return out, nil
+}
+
+func (c *friendServiceClient) SearchFriends(ctx context.Context, in *SearchFriendsRequest, opts ...grpc.CallOption) (*SearchFriendsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchFriendsResponse)
+	err := c.cc.Invoke(ctx, FriendService_SearchFriends_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *friendServiceClient) StreamFriendUpdates(ctx context.Context, in *StreamFriendUpdatesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[schema.Friend], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &FriendService_ServiceDesc.Streams[0], FriendService_StreamFriendUpdates_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[StreamFriendUpdatesRequest, schema.Friend]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -126,7 +154,7 @@ func (c *friendServiceClient) ListFreinds(ctx context.Context, in *GetFriendsReq
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FriendService_ListFreindsClient = grpc.ServerStreamingClient[GetFriendsResponse]
+type FriendService_StreamFriendUpdatesClient = grpc.ServerStreamingClient[schema.Friend]
 
 // FriendServiceServer is the server API for FriendService service.
 // All implementations must embed UnimplementedFriendServiceServer
@@ -135,10 +163,15 @@ type FriendServiceServer interface {
 	SendFriendRequest(context.Context, *SendFriendRequestRequest) (*SendFriendRequestResponse, error)
 	AcceptFriendRequest(context.Context, *AcceptFriendRequestRequest) (*AcceptFriendRequestResponse, error)
 	RejectFriendRequest(context.Context, *RejectFriendRequestRequest) (*RejectFriendRequestResponse, error)
-	BlockFriend(context.Context, *BlockRequest) (*BlockResponse, error)
-	UnblockFriend(context.Context, *UnblockRequest) (*UnblockResponse, error)
-	UpdateAliasName(context.Context, *UpdateAliasNameRequest) (*UpdateAliasNameResponse, error)
-	ListFreinds(*GetFriendsRequest, grpc.ServerStreamingServer[GetFriendsResponse]) error
+	RemoveFriend(context.Context, *RemoveFriendRequest) (*RemoveFriendResponse, error)
+	// Friend Lists
+	GetFriends(context.Context, *GetFriendsRequest) (*GetFriendsResponse, error)
+	GetPendingRequests(context.Context, *GetPendingRequestsRequest) (*GetPendingRequestsResponse, error)
+	GetBlockedUsers(context.Context, *GetBlockedUsersRequest) (*GetBlockedUsersResponse, error)
+	// Friend Search
+	SearchFriends(context.Context, *SearchFriendsRequest) (*SearchFriendsResponse, error)
+	// Streaming - Real-time friend updates
+	StreamFriendUpdates(*StreamFriendUpdatesRequest, grpc.ServerStreamingServer[schema.Friend]) error
 	mustEmbedUnimplementedFriendServiceServer()
 }
 
@@ -158,17 +191,23 @@ func (UnimplementedFriendServiceServer) AcceptFriendRequest(context.Context, *Ac
 func (UnimplementedFriendServiceServer) RejectFriendRequest(context.Context, *RejectFriendRequestRequest) (*RejectFriendRequestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RejectFriendRequest not implemented")
 }
-func (UnimplementedFriendServiceServer) BlockFriend(context.Context, *BlockRequest) (*BlockResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BlockFriend not implemented")
+func (UnimplementedFriendServiceServer) RemoveFriend(context.Context, *RemoveFriendRequest) (*RemoveFriendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveFriend not implemented")
 }
-func (UnimplementedFriendServiceServer) UnblockFriend(context.Context, *UnblockRequest) (*UnblockResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UnblockFriend not implemented")
+func (UnimplementedFriendServiceServer) GetFriends(context.Context, *GetFriendsRequest) (*GetFriendsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFriends not implemented")
 }
-func (UnimplementedFriendServiceServer) UpdateAliasName(context.Context, *UpdateAliasNameRequest) (*UpdateAliasNameResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateAliasName not implemented")
+func (UnimplementedFriendServiceServer) GetPendingRequests(context.Context, *GetPendingRequestsRequest) (*GetPendingRequestsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPendingRequests not implemented")
 }
-func (UnimplementedFriendServiceServer) ListFreinds(*GetFriendsRequest, grpc.ServerStreamingServer[GetFriendsResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method ListFreinds not implemented")
+func (UnimplementedFriendServiceServer) GetBlockedUsers(context.Context, *GetBlockedUsersRequest) (*GetBlockedUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlockedUsers not implemented")
+}
+func (UnimplementedFriendServiceServer) SearchFriends(context.Context, *SearchFriendsRequest) (*SearchFriendsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchFriends not implemented")
+}
+func (UnimplementedFriendServiceServer) StreamFriendUpdates(*StreamFriendUpdatesRequest, grpc.ServerStreamingServer[schema.Friend]) error {
+	return status.Errorf(codes.Unimplemented, "method StreamFriendUpdates not implemented")
 }
 func (UnimplementedFriendServiceServer) mustEmbedUnimplementedFriendServiceServer() {}
 func (UnimplementedFriendServiceServer) testEmbeddedByValue()                       {}
@@ -245,70 +284,106 @@ func _FriendService_RejectFriendRequest_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FriendService_BlockFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BlockRequest)
+func _FriendService_RemoveFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveFriendRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FriendServiceServer).BlockFriend(ctx, in)
+		return srv.(FriendServiceServer).RemoveFriend(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FriendService_BlockFriend_FullMethodName,
+		FullMethod: FriendService_RemoveFriend_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FriendServiceServer).BlockFriend(ctx, req.(*BlockRequest))
+		return srv.(FriendServiceServer).RemoveFriend(ctx, req.(*RemoveFriendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FriendService_UnblockFriend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnblockRequest)
+func _FriendService_GetFriends_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFriendsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FriendServiceServer).UnblockFriend(ctx, in)
+		return srv.(FriendServiceServer).GetFriends(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FriendService_UnblockFriend_FullMethodName,
+		FullMethod: FriendService_GetFriends_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FriendServiceServer).UnblockFriend(ctx, req.(*UnblockRequest))
+		return srv.(FriendServiceServer).GetFriends(ctx, req.(*GetFriendsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FriendService_UpdateAliasName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateAliasNameRequest)
+func _FriendService_GetPendingRequests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPendingRequestsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(FriendServiceServer).UpdateAliasName(ctx, in)
+		return srv.(FriendServiceServer).GetPendingRequests(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: FriendService_UpdateAliasName_FullMethodName,
+		FullMethod: FriendService_GetPendingRequests_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FriendServiceServer).UpdateAliasName(ctx, req.(*UpdateAliasNameRequest))
+		return srv.(FriendServiceServer).GetPendingRequests(ctx, req.(*GetPendingRequestsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _FriendService_ListFreinds_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GetFriendsRequest)
+func _FriendService_GetBlockedUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBlockedUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FriendServiceServer).GetBlockedUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FriendService_GetBlockedUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FriendServiceServer).GetBlockedUsers(ctx, req.(*GetBlockedUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FriendService_SearchFriends_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchFriendsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FriendServiceServer).SearchFriends(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FriendService_SearchFriends_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FriendServiceServer).SearchFriends(ctx, req.(*SearchFriendsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FriendService_StreamFriendUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamFriendUpdatesRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(FriendServiceServer).ListFreinds(m, &grpc.GenericServerStream[GetFriendsRequest, GetFriendsResponse]{ServerStream: stream})
+	return srv.(FriendServiceServer).StreamFriendUpdates(m, &grpc.GenericServerStream[StreamFriendUpdatesRequest, schema.Friend]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type FriendService_ListFreindsServer = grpc.ServerStreamingServer[GetFriendsResponse]
+type FriendService_StreamFriendUpdatesServer = grpc.ServerStreamingServer[schema.Friend]
 
 // FriendService_ServiceDesc is the grpc.ServiceDesc for FriendService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -330,22 +405,30 @@ var FriendService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FriendService_RejectFriendRequest_Handler,
 		},
 		{
-			MethodName: "BlockFriend",
-			Handler:    _FriendService_BlockFriend_Handler,
+			MethodName: "RemoveFriend",
+			Handler:    _FriendService_RemoveFriend_Handler,
 		},
 		{
-			MethodName: "UnblockFriend",
-			Handler:    _FriendService_UnblockFriend_Handler,
+			MethodName: "GetFriends",
+			Handler:    _FriendService_GetFriends_Handler,
 		},
 		{
-			MethodName: "UpdateAliasName",
-			Handler:    _FriendService_UpdateAliasName_Handler,
+			MethodName: "GetPendingRequests",
+			Handler:    _FriendService_GetPendingRequests_Handler,
+		},
+		{
+			MethodName: "GetBlockedUsers",
+			Handler:    _FriendService_GetBlockedUsers_Handler,
+		},
+		{
+			MethodName: "SearchFriends",
+			Handler:    _FriendService_SearchFriends_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ListFreinds",
-			Handler:       _FriendService_ListFreinds_Handler,
+			StreamName:    "StreamFriendUpdates",
+			Handler:       _FriendService_StreamFriendUpdates_Handler,
 			ServerStreams: true,
 		},
 	},

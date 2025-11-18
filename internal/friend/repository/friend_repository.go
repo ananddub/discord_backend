@@ -73,48 +73,57 @@ func (r *FriendRepository) GetSentFriendRequests(ctx context.Context, userID int
 
 // UpdateFriendStatus updates the status of a friendship
 func (r *FriendRepository) UpdateFriendStatus(ctx context.Context, userID, friendID int32, status string) error {
-	return r.queries.UpdateFriendStatus(ctx, repo.UpdateFriendStatusParams{
+	_, err := r.queries.UpdateFriendStatus(ctx, repo.UpdateFriendStatusParams{
 		UserID:   userID,
 		FriendID: friendID,
 		Status:   status,
 	})
+	return err
 }
 
 // UpdateFriendAlias updates the alias name for a friend
 func (r *FriendRepository) UpdateFriendAlias(ctx context.Context, userID, friendID int32, aliasName string) error {
-	return r.queries.UpdateFriendAlias(ctx, repo.UpdateFriendAliasParams{
+	_, err := r.queries.UpdateFriendAlias(ctx, repo.UpdateFriendAliasParams{
 		UserID:    userID,
 		FriendID:  friendID,
 		AliasName: pgtype.Text{String: aliasName, Valid: true},
 	})
+	return err
 }
 
 // ToggleFavorite toggles the favorite status of a friend
 func (r *FriendRepository) ToggleFavorite(ctx context.Context, userID, friendID int32, isFavorite bool) error {
-	return r.queries.ToggleFavorite(ctx, repo.ToggleFavoriteParams{
+	_, err := r.queries.ToggleFavorite(ctx, repo.ToggleFavoriteParams{
 		UserID:     userID,
 		FriendID:   friendID,
 		IsFavorite: pgtype.Bool{Bool: isFavorite, Valid: true},
 	})
+	return err
 }
 
 // DeleteFriendship deletes a bidirectional friendship
 func (r *FriendRepository) DeleteFriendship(ctx context.Context, userID, friendID int32) error {
-	return r.queries.SoftDeleteFriendship(ctx, repo.SoftDeleteFriendshipParams{
+	_, err := r.queries.SoftDeleteFriendship(ctx, repo.SoftDeleteFriendshipParams{
 		UserID:   userID,
 		FriendID: friendID,
 	})
+	return err
 }
 
 // BlockUser blocks a user
 func (r *FriendRepository) BlockUser(ctx context.Context, userID, friendID int32) error {
-	return r.queries.BlockUser(ctx, repo.BlockUserParams{
+	_, err := r.queries.BlockUser(ctx, repo.BlockUserParams{
 		UserID:   userID,
 		FriendID: friendID,
 	})
+	return err
 }
 
 // GetBlockedUsers retrieves all blocked users
 func (r *FriendRepository) GetBlockedUsers(ctx context.Context, userID int32) ([]repo.Friend, error) {
 	return r.queries.GetBlockedUsers(ctx, userID)
+}
+
+func (r *FriendRepository) GetUserByID(ctx context.Context, userID int32) (repo.User, error) {
+	return r.queries.GetUserByID(ctx, userID)
 }

@@ -2,20 +2,25 @@ package service
 
 import (
 	"context"
-	"time"
-
+	"discord/gen/proto/schema"
 	"discord/gen/repo"
 	commonErrors "discord/internal/common/errors"
+	"discord/internal/common/util"
 	userRepo "discord/internal/user/repository"
+	"discord/pkg/pubsub"
+	"fmt"
+	"time"
 )
 
 type UserService struct {
 	userRepo *userRepo.UserRepository
+	pubsub   *pubsub.PubSub
 }
 
 func NewUserService(userRepo *userRepo.UserRepository) *UserService {
 	return &UserService{
 		userRepo: userRepo,
+		pubsub:   pubsub.Get(),
 	}
 }
 
@@ -56,6 +61,27 @@ func (s *UserService) UpdateUser(ctx context.Context, userID int32, fullName, pr
 	if err != nil {
 		return repo.User{}, commonErrors.ErrInternalServer
 	}
+
+	// Stream update to all user devices
+	protoUser := &schema.User{
+		Id:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		FullName:        user.FullName.String,
+		ProfilePic:      user.ProfilePic.String,
+		Bio:             user.Bio.String,
+		ColorCode:       user.ColorCode.String,
+		BackgroundColor: user.BackgroundColor.String,
+		BackgroundPic:   user.BackgroundPic.String,
+		CreatedAt:       user.CreatedAt.Time.Unix(),
+		UpdatedAt:       user.UpdatedAt.Time.Unix(),
+	}
+
+	// Stream to user's own devices
+	s.publishUser(ctx, protoUser)
+
+	// Stream to friends and connected users
+	s.streamToConnectedUsers(ctx, userID, protoUser)
 
 	return user, nil
 }
@@ -106,6 +132,14 @@ func (s *UserService) ListUsers(ctx context.Context, limit, offset int32) ([]rep
 	}
 
 	return users, nil
+}
+
+// Helper method to stream updates to connected users
+func (s *UserService) streamToConnectedUsers(ctx context.Context, userID int32, protoUser *schema.User) {
+	// Get user's friends - simplified approach
+	// In real implementation, you'd query friends table
+	// For now, just stream to user's own devices
+	// TODO: Add friend queries when friend repository methods are available
 }
 
 func (s *UserService) UpdateUserPassword(ctx context.Context, userID int32, hashedPassword string) error {
@@ -159,6 +193,24 @@ func (s *UserService) UpdateStatus(ctx context.Context, userID int32, status str
 		return commonErrors.ErrInternalServer
 	}
 
+	// Get updated user for streaming
+	user, err := s.userRepo.GetUser(ctx, userID)
+	if err != nil {
+		return commonErrors.ErrInternalServer
+	}
+	protoUser := &schema.User{
+		Id:       user.ID,
+		Username: user.Username,
+		Status:   status,
+	}
+	if customStatus != nil {
+		protoUser.CustomStatus = *customStatus
+	}
+
+	s.publishUser(ctx, protoUser)
+	// Stream to connected users (friends, DM contacts, server members)
+	// s.streamToConnectedUsers(ctx, userID, protoUser)
+
 	return nil
 }
 
@@ -178,6 +230,20 @@ func (s *UserService) SetCustomStatus(ctx context.Context, userID int32, customS
 	err = s.userRepo.SetCustomStatus(ctx, userID, customStatus, emoji, expiresAt)
 	if err != nil {
 		return commonErrors.ErrInternalServer
+	}
+
+	// Stream custom status update
+	user, err := s.userRepo.GetUser(ctx, userID)
+	if err == nil {
+		protoUser := &schema.User{
+			Id:       user.ID,
+			Username: user.Username,
+		}
+		if customStatus != nil {
+			protoUser.CustomStatus = *customStatus
+		}
+
+		s.publishUser(ctx, protoUser)
 	}
 
 	return nil
@@ -315,4 +381,22 @@ func (s *UserService) UpdateUserSettings(ctx context.Context, userID int32, show
 	userSettingsCache[userID] = settings
 
 	return nil
+}
+
+func (s *UserService) GetConnectedFriends(ctx context.Context, userID int32) ([]repo.User, error) {
+	friends, err := s.userRepo.GetFriends(ctx, userID)
+	if err != nil {
+		return nil, commonErrors.ErrInternalServer
+	}
+	return friends, nil
+}
+
+func (s *UserService) MinioGetUploadProfileUrl(ctx context.Context, userID int32, filename, filetype string) (string, string, error) {
+
+	fileUrl := fmt.Sprintf("%s/%d/%s", "profile", userID, filename)
+	url, err := util.GenerateUploadURL(fmt.Sprintf(fileUrl, userID, filename), filetype)
+	if err != nil {
+		return "", "", commonErrors.ErrInternalServer
+	}
+	return url, fileUrl, nil
 }

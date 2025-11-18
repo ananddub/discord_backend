@@ -2,260 +2,110 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"log"
 
+	schema "discord/gen/proto/schema"
 	"discord/gen/proto/service/dm"
 	"discord/gen/repo"
-	commonErrors "discord/internal/common/errors"
-	dmService "discord/internal/dm/service"
+	"discord/internal/dm/service"
+	"discord/pkg/pubsub"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 )
 
 type DMController struct {
 	dm.UnimplementedDirectMessageServiceServer
-	dmService *dmService.DMService
-	queries   *repo.Queries
+	service *service.MessageService
+	db      *pgxpool.Pool
 }
 
-func NewDMController(dmService *dmService.DMService, queries *repo.Queries) *dm.DirectMessageServiceServer {
-	controller := &DMController{
-		dmService: dmService,
-		queries:   queries,
+func NewDMController(db *pgxpool.Pool) *DMController {
+	return &DMController{
+		service: service.NewMessageService(),
+		db:      db,
 	}
-	var grpcController dm.DirectMessageServiceServer = controller
-	return &grpcController
 }
 
-// CreateDMChannel creates a 1-on-1 DM channel
-func (c *DMController) CreateDMChannel(ctx context.Context, req *dm.CreateDMChannelRequest) (*dm.CreateDMChannelResponse, error) {
-	if req.GetUserId() == 0 || req.GetRecipientId() == 0 {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
+// Helper function to convert repo.Message to schema.Message
+func messageToProto(msg repo.Message) *schema.Message {
+	return &schema.Message{
+		Id:        msg.ID,
+		ChannelId: int32(msg.ReceiverID.Int32), // For DMs, receiver_id is stored as channel_id
+		SenderId:  msg.SenderID,
+		Content:   msg.Content,
+		IsEdited:  msg.IsEdited.Bool,
+		CreatedAt: msg.CreatedAt.Time.Unix() * 1000,
+	}
+}
+
+// ==================== MESSAGE OPERATIONS ====================
+
+// SendMessage sends a direct message
+func (c *DMController) SendMessage(ctx context.Context, req *dm.SendMessageRequest) (*dm.SendMessageResponse, error) {
+	if req == nil {
+		return &dm.SendMessageResponse{Success: false}, fmt.Errorf("request cannot be nil")
 	}
 
-	dmChannelID, err := c.dmService.CreateDMChannel(ctx, req.GetUserId(), req.GetRecipientId())
+	if req.ReceiverId == 0 {
+		return &dm.SendMessageResponse{Success: false}, fmt.Errorf("receiver_id is required")
+	}
+
+	if req.Content == "" {
+		return &dm.SendMessageResponse{Success: false}, fmt.Errorf("content cannot be empty")
+	}
+
+	message, err := c.service.SendMessage(ctx, req.ReceiverId, req.SenderId, req.Content, &req.ReplyToMessageId, false)
 	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
+		return &dm.SendMessageResponse{Success: false}, fmt.Errorf("failed to send message: %w", err)
 	}
 
-	return &dm.CreateDMChannelResponse{
-		DmChannelId: dmChannelID,
-		Success:     true,
-	}, nil
-}
-
-// CreateGroupDM creates a group DM channel
-func (c *DMController) CreateGroupDM(ctx context.Context, req *dm.CreateGroupDMRequest) (*dm.CreateGroupDMResponse, error) {
-	if req.GetOwnerId() == 0 || len(req.GetUserIds()) < 2 {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
-	}
-
-	dmChannelID, err := c.dmService.CreateGroupDM(ctx, req.GetOwnerId(), req.GetUserIds(), req.GetName())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.CreateGroupDMResponse{
-		DmChannelId: dmChannelID,
-		Success:     true,
-	}, nil
-}
-
-// GetDMChannel retrieves a DM channel
-func (c *DMController) GetDMChannel(ctx context.Context, req *dm.GetDMChannelRequest) (*dm.GetDMChannelResponse, error) {
-	channel, err := c.dmService.GetDMChannel(ctx, req.GetDmChannelId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.GetDMChannelResponse{
-		Id:             channel.ID,
-		ParticipantIds: channel.ParticipantIDs,
-		Name:           channel.Name,
-		Icon:           channel.Icon,
-	}, nil
-}
-
-// GetUserDMChannels retrieves all DM channels for a user
-func (c *DMController) GetUserDMChannels(ctx context.Context, req *dm.GetUserDMChannelsRequest) (*dm.GetUserDMChannelsResponse, error) {
-	channels, err := c.dmService.GetUserDMChannels(ctx, req.GetUserId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	channelInfos := make([]*dm.DMChannelInfo, len(channels))
-	for i, ch := range channels {
-		channelInfos[i] = &dm.DMChannelInfo{
-			Id:             ch.ID,
-			ParticipantIds: ch.ParticipantIDs,
-			Name:           ch.Name,
-			Icon:           ch.Icon,
-			LastMessageId:  ch.LastMessageID,
-			LastMessageAt:  ch.LastMessageAt,
-			UnreadCount:    ch.UnreadCount,
-		}
-	}
-
-	return &dm.GetUserDMChannelsResponse{
-		Channels: channelInfos,
-	}, nil
-}
-
-// CloseDMChannel closes a DM channel for a user
-func (c *DMController) CloseDMChannel(ctx context.Context, req *dm.CloseDMChannelRequest) (*dm.CloseDMChannelResponse, error) {
-	err := c.dmService.CloseDMChannel(ctx, req.GetDmChannelId(), req.GetUserId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.CloseDMChannelResponse{
+	return &dm.SendMessageResponse{
 		Success: true,
+		Message: messageToProto(message),
 	}, nil
 }
 
-// AddUserToGroupDM adds a user to a group DM
-func (c *DMController) AddUserToGroupDM(ctx context.Context, req *dm.AddUserToGroupDMRequest) (*dm.AddUserToGroupDMResponse, error) {
-	err := c.dmService.AddUserToGroupDM(ctx, req.GetDmChannelId(), req.GetUserId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
+// GetMessages retrieves messages between two users (streaming)
+func (c *DMController) GetMessages(req *dm.GetMessagesRequest, stream dm.DirectMessageService_GetMessagesServer) error {
+	if req == nil {
+		return fmt.Errorf("request cannot be nil")
 	}
 
-	return &dm.AddUserToGroupDMResponse{
-		Success: true,
-	}, nil
-}
-
-// RemoveUserFromGroupDM removes a user from a group DM
-func (c *DMController) RemoveUserFromGroupDM(ctx context.Context, req *dm.RemoveUserFromGroupDMRequest) (*dm.RemoveUserFromGroupDMResponse, error) {
-	err := c.dmService.RemoveUserFromGroupDM(ctx, req.GetDmChannelId(), req.GetUserId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.RemoveUserFromGroupDMResponse{
-		Success: true,
-	}, nil
-}
-
-// UpdateGroupDM updates group DM information
-func (c *DMController) UpdateGroupDM(ctx context.Context, req *dm.UpdateGroupDMRequest) (*dm.UpdateGroupDMResponse, error) {
-	var name, icon *string
-
-	if req.GetName() != "" {
-		n := req.GetName()
-		name = &n
-	}
-
-	if req.GetIcon() != "" {
-		i := req.GetIcon()
-		icon = &i
-	}
-
-	err := c.dmService.UpdateGroupDM(ctx, req.GetDmChannelId(), name, icon)
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.UpdateGroupDMResponse{
-		Success: true,
-	}, nil
-}
-
-// SendDM sends a direct message
-func (c *DMController) SendDM(ctx context.Context, req *dm.SendDMRequest) (*dm.SendDMResponse, error) {
-	// Validate input
-	if req.GetDmChannelId() == 0 || req.GetSenderId() == 0 || req.GetContent() == "" {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
-	}
-
-	// Verify DM channel exists and user is participant
-	channel, err := c.dmService.GetDMChannel(ctx, req.GetDmChannelId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	// Check if sender is a participant
-	isParticipant := false
-	for _, participantID := range channel.ParticipantIDs {
-		if participantID == req.GetSenderId() {
-			isParticipant = true
-			break
-		}
-	}
-	if !isParticipant {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrPermissionDenied)
-	}
-
-	// Create message in database
-	message, err := c.queries.CreateMessage(ctx, repo.CreateMessageParams{
-		ChannelID:       req.GetDmChannelId(),
-		SenderID:        req.GetSenderId(),
-		Content:         req.GetContent(),
-		MessageType:     pgtype.Text{String: "TEXT", Valid: true},
-		MentionEveryone: pgtype.Bool{Bool: false, Valid: true},
-	})
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	// Update last message info in DM channel
-	err = c.dmService.UpdateLastMessage(ctx, req.GetDmChannelId(), message.ID)
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.SendDMResponse{
-		MessageId: message.ID,
-		CreatedAt: message.CreatedAt.Time.Unix(),
-		Success:   true,
-	}, nil
-}
-
-// GetDMMessages retrieves DM messages (streaming response)
-func (c *DMController) GetDMMessages(req *dm.GetDMMessagesRequest, stream dm.DirectMessageService_GetDMMessagesServer) error {
 	ctx := stream.Context()
 
-	// Verify DM channel exists
-	_, err := c.dmService.GetDMChannel(ctx, req.GetDmChannelId())
+	if req.UserId == 0 {
+		return fmt.Errorf("user_id is required")
+	}
+
+	// Validate limits
+	limit := req.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get messages from service
+	messages, err := c.service.GetMessages(ctx, req.UserId, limit, offset, nil, nil)
 	if err != nil {
-		return commonErrors.ToGRPCError(err)
+		log.Printf("Failed to get messages: %v", err)
+		return fmt.Errorf("failed to get messages: %w", err)
 	}
 
-	// Get messages from database
-	var messages []repo.Message
-	if req.GetBeforeMessageId() != 0 {
-		// Get messages before a specific message ID
-		messages, err = c.queries.GetMessagesBefore(ctx, repo.GetMessagesBeforeParams{
-			ChannelID: req.GetDmChannelId(),
-			ID:        req.GetBeforeMessageId(),
-			Limit:     req.GetLimit(),
-		})
-	} else {
-		// Get latest messages
-		limit := req.GetLimit()
-		if limit == 0 {
-			limit = 50 // Default limit
-		}
-		messages, err = c.queries.GetChannelMessages(ctx, repo.GetChannelMessagesParams{
-			ChannelID: req.GetDmChannelId(),
-			Limit:     limit,
-			Offset:    0,
-		})
-	}
-
-	if err != nil {
-		return commonErrors.ToGRPCError(err)
-	}
-
-	// Stream messages to client
+	// Stream messages back
 	for _, msg := range messages {
-		if err := stream.Send(&dm.GetDMMessagesResponse{
-			Id:        msg.ID,
-			SenderId:  msg.SenderID,
-			Content:   msg.Content,
-			IsRead:    false, // TODO: Check against last_read_message_id
-			IsEdited:  msg.IsEdited.Bool,
-			CreatedAt: msg.CreatedAt.Time.Unix(),
-		}); err != nil {
+		resp := &dm.GetMessagesResponse{
+			Messages: []*schema.Message{
+				messageToProto(msg),
+			},
+		}
+		if err := stream.Send(resp); err != nil {
+			log.Printf("Failed to send message: %v", err)
 			return err
 		}
 	}
@@ -263,71 +113,316 @@ func (c *DMController) GetDMMessages(req *dm.GetDMMessagesRequest, stream dm.Dir
 	return nil
 }
 
-// EditDM edits a direct message
-func (c *DMController) EditDM(ctx context.Context, req *dm.EditDMRequest) (*dm.EditDMResponse, error) {
-	// Validate input
-	if req.GetMessageId() == 0 || req.GetContent() == "" {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
+// GetMessage retrieves a single message by ID
+func (c *DMController) GetMessage(ctx context.Context, req *dm.GetMessageRequest) (*dm.GetMessageResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
 	}
 
-	// Get message to verify it exists
-	message, err := c.queries.GetMessageByID(ctx, req.GetMessageId())
+	if req.MessageId == 0 {
+		return nil, fmt.Errorf("message_id is required")
+	}
+
+	message, err := c.service.GetMessage(ctx, req.MessageId)
 	if err != nil {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrNotFound)
+		log.Printf("Failed to get message: %v", err)
+		return nil, fmt.Errorf("message not found")
 	}
 
-	// TODO: Verify user owns the message
-	_ = message
-
-	// Update message in database
-	_, err = c.queries.UpdateMessage(ctx, repo.UpdateMessageParams{
-		ID:      req.GetMessageId(),
-		Content: req.GetContent(),
-	})
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.EditDMResponse{
-		Success: true,
+	return &dm.GetMessageResponse{
+		Id:         message.ID,
+		ReceiverId: int32(message.ReceiverID.Int32),
+		SenderId:   message.SenderID,
+		Content:    message.Content,
+		IsEdited:   message.IsEdited.Bool,
+		CreatedAt:  message.CreatedAt.Time.Unix() * 1000,
 	}, nil
 }
 
-// DeleteDM deletes a direct message
-func (c *DMController) DeleteDM(ctx context.Context, req *dm.DeleteDMRequest) (*dm.DeleteDMResponse, error) {
-	// Validate input
-	if req.GetMessageId() == 0 {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
+// EditMessage edits a message
+func (c *DMController) EditMessage(ctx context.Context, req *dm.EditMessageRequest) (*dm.EditMessageResponse, error) {
+	if req == nil {
+		return &dm.EditMessageResponse{Success: false}, fmt.Errorf("request cannot be nil")
 	}
 
-	// Get message to verify it exists
-	message, err := c.queries.GetMessageByID(ctx, req.GetMessageId())
+	if req.MessageId == 0 {
+		return &dm.EditMessageResponse{Success: false}, fmt.Errorf("message_id is required")
+	}
+
+	if req.Content == "" {
+		return &dm.EditMessageResponse{Success: false}, fmt.Errorf("content cannot be empty")
+	}
+
+	message, err := c.service.EditMessage(ctx, req.MessageId, 1, req.Content)
 	if err != nil {
-		return nil, commonErrors.ToGRPCError(commonErrors.ErrNotFound)
+		log.Printf("Failed to update message: %v", err)
+		return &dm.EditMessageResponse{Success: false}, fmt.Errorf("failed to update message: %w", err)
 	}
 
-	// TODO: Verify user has permission to delete (message owner or admin)
-	_ = message
-
-	// Delete message from database
-	err = c.queries.SoftDeleteMessage(ctx, req.GetMessageId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
-	}
-
-	return &dm.DeleteDMResponse{
+	return &dm.EditMessageResponse{
 		Success: true,
+		Message: messageToProto(message),
 	}, nil
 }
 
-// MarkAsRead marks messages as read
-func (c *DMController) MarkAsRead(ctx context.Context, req *dm.MarkAsReadRequest) (*dm.MarkAsReadResponse, error) {
-	err := c.dmService.MarkAsRead(ctx, req.GetDmChannelId(), req.GetUserId(), req.GetMessageId())
-	if err != nil {
-		return nil, commonErrors.ToGRPCError(err)
+// DeleteMessage deletes a message (soft delete)
+func (c *DMController) DeleteMessage(ctx context.Context, req *dm.DeleteMessageRequest) (*dm.DeleteMessageResponse, error) {
+	if req == nil {
+		return &dm.DeleteMessageResponse{Success: false}, fmt.Errorf("request cannot be nil")
 	}
 
-	return &dm.MarkAsReadResponse{
-		Success: true,
+	if req.MessageId == 0 {
+		return &dm.DeleteMessageResponse{Success: false}, fmt.Errorf("message_id is required")
+	}
+
+	err := c.service.DeleteMessage(ctx, req.MessageId, 1) // 1 = sender ID from context
+	if err != nil {
+		log.Printf("Failed to delete message: %v", err)
+		return &dm.DeleteMessageResponse{Success: false}, fmt.Errorf("failed to delete message: %w", err)
+	}
+
+	return &dm.DeleteMessageResponse{Success: true}, nil
+}
+
+// ==================== MESSAGE INTERACTIONS ====================
+
+// PinMessage pins a message
+func (c *DMController) PinMessage(ctx context.Context, req *dm.PinMessageRequest) (*dm.PinMessageResponse, error) {
+	if req == nil {
+		return &dm.PinMessageResponse{Success: false}, fmt.Errorf("request cannot be nil")
+	}
+
+	if req.MessageId == 0 {
+		return &dm.PinMessageResponse{Success: false}, fmt.Errorf("message_id is required")
+	}
+
+	err := c.service.PinMessage(ctx, req.MessageId)
+	if err != nil {
+		log.Printf("Failed to pin message: %v", err)
+		return &dm.PinMessageResponse{Success: false}, fmt.Errorf("failed to pin message: %w", err)
+	}
+
+	return &dm.PinMessageResponse{Success: true}, nil
+}
+
+// UnpinMessage unpins a message
+func (c *DMController) UnpinMessage(ctx context.Context, req *dm.UnpinMessageRequest) (*dm.UnpinMessageResponse, error) {
+	if req == nil {
+		return &dm.UnpinMessageResponse{Success: false}, fmt.Errorf("request cannot be nil")
+	}
+
+	if req.MessageId == 0 {
+		return &dm.UnpinMessageResponse{Success: false}, fmt.Errorf("message_id is required")
+	}
+
+	err := c.service.UnpinMessage(ctx, req.MessageId)
+	if err != nil {
+		log.Printf("Failed to unpin message: %v", err)
+		return &dm.UnpinMessageResponse{Success: false}, fmt.Errorf("failed to unpin message: %w", err)
+	}
+
+	return &dm.UnpinMessageResponse{Success: true}, nil
+}
+
+// GetPinnedMessages gets pinned messages
+func (c *DMController) GetPinnedMessages(ctx context.Context, req *dm.GetPinnedMessagesRequest) (*dm.GetPinnedMessagesResponse, error) {
+	if req == nil {
+		return &dm.GetPinnedMessagesResponse{}, fmt.Errorf("request cannot be nil")
+	}
+
+	// TODO: Implement GetPinnedMessages in repo queries
+	// For now, return empty response
+	return &dm.GetPinnedMessagesResponse{
+		MessageIds: []int32{},
 	}, nil
+}
+
+// AddReaction adds a reaction to a message
+func (c *DMController) AddReaction(ctx context.Context, req *dm.AddReactionRequest) (*dm.AddReactionResponse, error) {
+	if req == nil {
+		return &dm.AddReactionResponse{Success: false}, fmt.Errorf("request cannot be nil")
+	}
+
+	if req.MessageId == 0 {
+		return &dm.AddReactionResponse{Success: false}, fmt.Errorf("message_id is required")
+	}
+
+	if req.Emoji == "" {
+		return &dm.AddReactionResponse{Success: false}, fmt.Errorf("emoji is required")
+	}
+
+	err := c.service.AddReaction(ctx, req.MessageId, req.SenderId, req.Emoji, nil)
+	if err != nil {
+		log.Printf("Failed to add reaction: %v", err)
+		return &dm.AddReactionResponse{Success: false}, fmt.Errorf("failed to add reaction: %w", err)
+	}
+
+	return &dm.AddReactionResponse{Success: true}, nil
+}
+
+// RemoveReaction removes a reaction from a message
+func (c *DMController) RemoveReaction(ctx context.Context, req *dm.RemoveReactionRequest) (*dm.RemoveReactionResponse, error) {
+	if req == nil {
+		return &dm.RemoveReactionResponse{Success: false}, fmt.Errorf("request cannot be nil")
+	}
+
+	if req.MessageId == 0 {
+		return &dm.RemoveReactionResponse{Success: false}, fmt.Errorf("message_id is required")
+	}
+
+	if req.Emoji == "" {
+		return &dm.RemoveReactionResponse{Success: false}, fmt.Errorf("emoji is required")
+	}
+
+	err := c.service.RemoveReaction(ctx, req.MessageId, req.SenderId, req.Emoji)
+	if err != nil {
+		log.Printf("Failed to remove reaction: %v", err)
+		return &dm.RemoveReactionResponse{Success: false}, fmt.Errorf("failed to remove reaction: %w", err)
+	}
+
+	return &dm.RemoveReactionResponse{Success: true}, nil
+}
+
+// GetReactions gets reactions on a message
+func (c *DMController) GetReactions(ctx context.Context, req *dm.GetReactionsRequest) (*dm.GetReactionsResponse, error) {
+	if req == nil {
+		return &dm.GetReactionsResponse{}, fmt.Errorf("request cannot be nil")
+	}
+
+	if req.MessageId == 0 {
+		return &dm.GetReactionsResponse{}, fmt.Errorf("message_id is required")
+	}
+
+	reactions, err := c.service.GetReactions(ctx, req.MessageId, nil)
+	if err != nil {
+		log.Printf("Failed to get reactions: %v", err)
+		return &dm.GetReactionsResponse{}, fmt.Errorf("failed to get reactions: %w", err)
+	}
+
+	// Group reactions by emoji
+	reactionMap := make(map[string]*dm.ReactionInfo)
+	for _, reaction := range reactions {
+		if _, exists := reactionMap[reaction.Emoji]; !exists {
+			reactionMap[reaction.Emoji] = &dm.ReactionInfo{
+				Emoji:   reaction.Emoji,
+				Count:   0,
+				UserIds: []int32{},
+			}
+		}
+		reactionMap[reaction.Emoji].Count++
+		reactionMap[reaction.Emoji].UserIds = append(reactionMap[reaction.Emoji].UserIds, reaction.UserID)
+	}
+
+	var reactionList []*dm.ReactionInfo
+	for _, reaction := range reactionMap {
+		reactionList = append(reactionList, reaction)
+	}
+
+	return &dm.GetReactionsResponse{
+		Reactions: reactionList,
+	}, nil
+}
+
+// ==================== BULK OPERATIONS ====================
+
+// BulkDeleteMessages deletes multiple messages
+func (c *DMController) BulkDeleteMessages(ctx context.Context, req *dm.BulkDeleteMessagesRequest) (*dm.BulkDeleteMessagesResponse, error) {
+	if req == nil {
+		return &dm.BulkDeleteMessagesResponse{Success: false}, fmt.Errorf("request cannot be nil")
+	}
+
+	if len(req.MessageIds) == 0 {
+		return &dm.BulkDeleteMessagesResponse{Success: false}, fmt.Errorf("message_ids cannot be empty")
+	}
+
+	err := c.service.BulkDeleteMessages(ctx, req.MessageIds)
+	if err != nil {
+		log.Printf("Failed to bulk delete messages: %v", err)
+		return &dm.BulkDeleteMessagesResponse{Success: false}, fmt.Errorf("failed to bulk delete messages: %w", err)
+	}
+
+	return &dm.BulkDeleteMessagesResponse{
+		DeletedCount: int32(len(req.MessageIds)),
+		Success:      true,
+	}, nil
+}
+
+// SearchMessages searches for messages
+func (c *DMController) SearchMessages(ctx context.Context, req *dm.SearchMessagesRequest) (*dm.SearchMessagesResponse, error) {
+	if req == nil {
+		return &dm.SearchMessagesResponse{}, fmt.Errorf("request cannot be nil")
+	}
+
+	if req.Query == "" {
+		return &dm.SearchMessagesResponse{}, fmt.Errorf("query cannot be empty")
+	}
+
+	// Validate limits
+	limit := req.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	messages, err := c.service.SearchMessages(ctx, req.ReceiverId, req.Query, limit, offset)
+	if err != nil {
+		log.Printf("Failed to search messages: %v", err)
+		return &dm.SearchMessagesResponse{}, fmt.Errorf("failed to search messages: %w", err)
+	}
+
+	var results []*dm.MessageSearchResult
+	for _, msg := range messages {
+		result := &dm.MessageSearchResult{
+			MessageId:  msg.ID,
+			ReceiverId: int32(msg.ReceiverID.Int32),
+			SenderId:   msg.SenderID,
+			Content:    msg.Content,
+			CreatedAt:  msg.CreatedAt.Time.Unix() * 1000,
+		}
+		results = append(results, result)
+	}
+
+	return &dm.SearchMessagesResponse{
+		Results:      results,
+		TotalResults: int32(len(results)),
+	}, nil
+}
+func (c *DMController) SendTyping(stream grpc.BidiStreamingServer[dm.SendTypingRequest, dm.SendTypingResponse]) error {
+	pub := pubsub.Get()
+	ctx := stream.Context()
+	userID, ok := ctx.Value("user_id").(int32)
+	if !ok {
+		return fmt.Errorf("user_id not found in context")
+	}
+	go func() {
+		for {
+			value, err := stream.Recv()
+			if err != nil {
+				log.Println("Receive error:", err)
+				return
+			}
+
+			pub.Publish(fmt.Sprintf("msgtyping:%d", value.ReceiverId), value)
+			log.Println("Received typing event:", value)
+		}
+	}()
+	ch := pub.Subscribe(fmt.Sprintf("msgtyping:%d", userID))
+	defer ch.Close()
+	for msg := range ch.Receive() {
+		typingEvent, ok := msg.(*dm.SendTypingRequest)
+		if !ok {
+			log.Println("Invalid message type")
+			continue
+		}
+		stream.Send(&dm.SendTypingResponse{
+			SenderId:   typingEvent.SenderId,
+			IsTyping:   typingEvent.IsTyping,
+			ReceiverId: typingEvent.ReceiverId,
+		})
+	}
+	return nil
 }

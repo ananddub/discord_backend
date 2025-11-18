@@ -89,13 +89,15 @@ func (r *VoiceRepository) UpdateVoiceState(ctx context.Context, userID, channelI
 
 // DeleteVoiceState removes a voice state
 func (r *VoiceRepository) DeleteVoiceState(ctx context.Context, userID, channelID int32) error {
-	return r.q.DeleteVoiceState(ctx, repo.DeleteVoiceStateParams{
+	_, err := r.q.DeleteVoiceState(ctx, repo.DeleteVoiceStateParams{
 		UserID:    userID,
 		ChannelID: channelID,
 	})
+	return err
 }
 
 // DeleteUserVoiceStates removes all voice states for a user
 func (r *VoiceRepository) DeleteUserVoiceStates(ctx context.Context, userID int32) error {
-	return r.q.DeleteUserVoiceStates(ctx, userID)
+	_, err := r.q.DeleteUserVoiceStates(ctx, userID)
+	return err
 }

@@ -60,29 +60,34 @@ func (r *AuthRepository) GetUserByUsername(ctx context.Context, username string)
 
 // UpdateUserStatus updates user online status
 func (r *AuthRepository) UpdateUserStatus(ctx context.Context, userID int32, status string) error {
-	return r.queries.UpdateUserStatus(ctx, repo.UpdateUserStatusParams{
+	_, err := r.queries.UpdateUserStatus(ctx, repo.UpdateUserStatusParams{
 		ID:     userID,
 		Status: status,
 	})
+	return err
 }
 
 // UpdatePassword updates user password
 func (r *AuthRepository) UpdatePassword(ctx context.Context, userID int32, password string) error {
-	return r.queries.UpdateUserPassword(ctx, repo.UpdateUserPasswordParams{
+	_, err := r.queries.UpdateUserPassword(ctx, repo.UpdateUserPasswordParams{
 		ID:       userID,
 		Password: password,
 	})
+	return err
 }
 
 // Enable2FA enables or disables 2FA for user
 func (r *AuthRepository) Enable2FA(ctx context.Context, userID int32, enabled bool) error {
-	return r.queries.Enable2FA(ctx, repo.Enable2FAParams{
+	_, err := r.queries.Enable2FA(ctx, repo.Enable2FAParams{
 		ID:           userID,
 		Is2faEnabled: pgtype.Bool{Bool: enabled, Valid: true},
 	})
+	return err
+
 }
 
 // DeleteUser deletes a user account
 func (r *AuthRepository) DeleteUser(ctx context.Context, userID int32) error {
-	return r.queries.SoftDeleteUser(ctx, userID)
+	_, err := r.queries.SoftDeleteUser(ctx, userID)
+	return err
 }

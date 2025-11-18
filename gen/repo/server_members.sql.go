@@ -12,11 +12,11 @@ import (
 )
 
 const addServerMember = `-- name: AddServerMember :one
-INSERT INTO server_members (
-    server_id, user_id, nickname
-) VALUES (
-    $1, $2, $3
-) RETURNING id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
+INSERT INTO
+    server_members (server_id, user_id, nickname)
+VALUES ($1, $2, $3)
+RETURNING
+    id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
 `
 
 type AddServerMemberParams struct {
@@ -42,8 +42,7 @@ func (q *Queries) AddServerMember(ctx context.Context, arg AddServerMemberParams
 }
 
 const countServerMembers = `-- name: CountServerMembers :one
-SELECT COUNT(*) FROM server_members
-WHERE server_id = $1
+SELECT COUNT(*) FROM server_members WHERE server_id = $1
 `
 
 func (q *Queries) CountServerMembers(ctx context.Context, serverID int32) (int64, error) {
@@ -54,8 +53,12 @@ func (q *Queries) CountServerMembers(ctx context.Context, serverID int32) (int64
 }
 
 const getServerMember = `-- name: GetServerMember :one
-SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at FROM server_members
-WHERE server_id = $1 AND user_id = $2 LIMIT 1
+SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
+FROM server_members
+WHERE
+    server_id = $1
+    AND user_id = $2
+LIMIT 1
 `
 
 type GetServerMemberParams struct {
@@ -80,10 +83,14 @@ func (q *Queries) GetServerMember(ctx context.Context, arg GetServerMemberParams
 }
 
 const getServerMembers = `-- name: GetServerMembers :many
-SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at FROM server_members
-WHERE server_id = $1
+SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
+FROM server_members
+WHERE
+    server_id = $1
 ORDER BY joined_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $2
+OFFSET
+    $3
 `
 
 type GetServerMembersParams struct {
@@ -122,8 +129,10 @@ func (q *Queries) GetServerMembers(ctx context.Context, arg GetServerMembersPara
 }
 
 const getUserServerMemberships = `-- name: GetUserServerMemberships :many
-SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at FROM server_members
-WHERE user_id = $1
+SELECT id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
+FROM server_members
+WHERE
+    user_id = $1
 ORDER BY joined_at DESC
 `
 
@@ -156,9 +165,13 @@ func (q *Queries) GetUserServerMemberships(ctx context.Context, userID int32) ([
 	return items, nil
 }
 
-const removeServerMember = `-- name: RemoveServerMember :exec
+const removeServerMember = `-- name: RemoveServerMember :one
 DELETE FROM server_members
-WHERE server_id = $1 AND user_id = $2
+WHERE
+    server_id = $1
+    AND user_id = $2
+RETURNING
+    id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
 `
 
 type RemoveServerMemberParams struct {
@@ -166,15 +179,33 @@ type RemoveServerMemberParams struct {
 	UserID   int32 `json:"user_id"`
 }
 
-func (q *Queries) RemoveServerMember(ctx context.Context, arg RemoveServerMemberParams) error {
-	_, err := q.db.Exec(ctx, removeServerMember, arg.ServerID, arg.UserID)
-	return err
+func (q *Queries) RemoveServerMember(ctx context.Context, arg RemoveServerMemberParams) (ServerMember, error) {
+	row := q.db.QueryRow(ctx, removeServerMember, arg.ServerID, arg.UserID)
+	var i ServerMember
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.Nickname,
+		&i.JoinedAt,
+		&i.IsMuted,
+		&i.IsDeafened,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const updateMemberMuteStatus = `-- name: UpdateMemberMuteStatus :exec
+const updateMemberMuteStatus = `-- name: UpdateMemberMuteStatus :one
 UPDATE server_members
-SET is_muted = $3, is_deafened = $4, updated_at = CURRENT_TIMESTAMP
-WHERE server_id = $1 AND user_id = $2
+SET
+    is_muted = $3,
+    is_deafened = $4,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    server_id = $1
+    AND user_id = $2
+RETURNING
+    id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
 `
 
 type UpdateMemberMuteStatusParams struct {
@@ -184,20 +215,37 @@ type UpdateMemberMuteStatusParams struct {
 	IsDeafened pgtype.Bool `json:"is_deafened"`
 }
 
-func (q *Queries) UpdateMemberMuteStatus(ctx context.Context, arg UpdateMemberMuteStatusParams) error {
-	_, err := q.db.Exec(ctx, updateMemberMuteStatus,
+func (q *Queries) UpdateMemberMuteStatus(ctx context.Context, arg UpdateMemberMuteStatusParams) (ServerMember, error) {
+	row := q.db.QueryRow(ctx, updateMemberMuteStatus,
 		arg.ServerID,
 		arg.UserID,
 		arg.IsMuted,
 		arg.IsDeafened,
 	)
-	return err
+	var i ServerMember
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.Nickname,
+		&i.JoinedAt,
+		&i.IsMuted,
+		&i.IsDeafened,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const updateMemberNickname = `-- name: UpdateMemberNickname :exec
+const updateMemberNickname = `-- name: UpdateMemberNickname :one
 UPDATE server_members
-SET nickname = $3, updated_at = CURRENT_TIMESTAMP
-WHERE server_id = $1 AND user_id = $2
+SET
+    nickname = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    server_id = $1
+    AND user_id = $2
+RETURNING
+    id, server_id, user_id, nickname, joined_at, is_muted, is_deafened, updated_at
 `
 
 type UpdateMemberNicknameParams struct {
@@ -206,7 +254,18 @@ type UpdateMemberNicknameParams struct {
 	Nickname pgtype.Text `json:"nickname"`
 }
 
-func (q *Queries) UpdateMemberNickname(ctx context.Context, arg UpdateMemberNicknameParams) error {
-	_, err := q.db.Exec(ctx, updateMemberNickname, arg.ServerID, arg.UserID, arg.Nickname)
-	return err
+func (q *Queries) UpdateMemberNickname(ctx context.Context, arg UpdateMemberNicknameParams) (ServerMember, error) {
+	row := q.db.QueryRow(ctx, updateMemberNickname, arg.ServerID, arg.UserID, arg.Nickname)
+	var i ServerMember
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.Nickname,
+		&i.JoinedAt,
+		&i.IsMuted,
+		&i.IsDeafened,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

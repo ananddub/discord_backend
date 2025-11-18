@@ -11,19 +11,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteChannelPermission = `-- name: DeleteChannelPermission :exec
-DELETE FROM channel_permissions
-WHERE id = $1
+const deleteChannelPermission = `-- name: DeleteChannelPermission :one
+DELETE FROM channel_permissions WHERE id = $1 RETURNING id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
 `
 
-func (q *Queries) DeleteChannelPermission(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteChannelPermission, id)
-	return err
+func (q *Queries) DeleteChannelPermission(ctx context.Context, id int32) (ChannelPermission, error) {
+	row := q.db.QueryRow(ctx, deleteChannelPermission, id)
+	var i ChannelPermission
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.RoleID,
+		&i.UserID,
+		&i.AllowPermissions,
+		&i.DenyPermissions,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const deleteRoleChannelPermissions = `-- name: DeleteRoleChannelPermissions :exec
+const deleteRoleChannelPermissions = `-- name: DeleteRoleChannelPermissions :one
 DELETE FROM channel_permissions
-WHERE channel_id = $1 AND role_id = $2
+WHERE
+    channel_id = $1
+    AND role_id = $2
+RETURNING
+    id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
 `
 
 type DeleteRoleChannelPermissionsParams struct {
@@ -31,14 +45,29 @@ type DeleteRoleChannelPermissionsParams struct {
 	RoleID    pgtype.Int4 `json:"role_id"`
 }
 
-func (q *Queries) DeleteRoleChannelPermissions(ctx context.Context, arg DeleteRoleChannelPermissionsParams) error {
-	_, err := q.db.Exec(ctx, deleteRoleChannelPermissions, arg.ChannelID, arg.RoleID)
-	return err
+func (q *Queries) DeleteRoleChannelPermissions(ctx context.Context, arg DeleteRoleChannelPermissionsParams) (ChannelPermission, error) {
+	row := q.db.QueryRow(ctx, deleteRoleChannelPermissions, arg.ChannelID, arg.RoleID)
+	var i ChannelPermission
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.RoleID,
+		&i.UserID,
+		&i.AllowPermissions,
+		&i.DenyPermissions,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const deleteUserChannelPermissions = `-- name: DeleteUserChannelPermissions :exec
+const deleteUserChannelPermissions = `-- name: DeleteUserChannelPermissions :one
 DELETE FROM channel_permissions
-WHERE channel_id = $1 AND user_id = $2
+WHERE
+    channel_id = $1
+    AND user_id = $2
+RETURNING
+    id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
 `
 
 type DeleteUserChannelPermissionsParams struct {
@@ -46,14 +75,24 @@ type DeleteUserChannelPermissionsParams struct {
 	UserID    pgtype.Int4 `json:"user_id"`
 }
 
-func (q *Queries) DeleteUserChannelPermissions(ctx context.Context, arg DeleteUserChannelPermissionsParams) error {
-	_, err := q.db.Exec(ctx, deleteUserChannelPermissions, arg.ChannelID, arg.UserID)
-	return err
+func (q *Queries) DeleteUserChannelPermissions(ctx context.Context, arg DeleteUserChannelPermissionsParams) (ChannelPermission, error) {
+	row := q.db.QueryRow(ctx, deleteUserChannelPermissions, arg.ChannelID, arg.UserID)
+	var i ChannelPermission
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.RoleID,
+		&i.UserID,
+		&i.AllowPermissions,
+		&i.DenyPermissions,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getChannelPermissions = `-- name: GetChannelPermissions :many
-SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions
-WHERE channel_id = $1
+SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions WHERE channel_id = $1
 `
 
 func (q *Queries) GetChannelPermissions(ctx context.Context, channelID int32) ([]ChannelPermission, error) {
@@ -86,8 +125,12 @@ func (q *Queries) GetChannelPermissions(ctx context.Context, channelID int32) ([
 }
 
 const getRoleChannelPermissions = `-- name: GetRoleChannelPermissions :one
-SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions
-WHERE channel_id = $1 AND role_id = $2 LIMIT 1
+SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
+FROM channel_permissions
+WHERE
+    channel_id = $1
+    AND role_id = $2
+LIMIT 1
 `
 
 type GetRoleChannelPermissionsParams struct {
@@ -112,8 +155,12 @@ func (q *Queries) GetRoleChannelPermissions(ctx context.Context, arg GetRoleChan
 }
 
 const getUserChannelPermissions = `-- name: GetUserChannelPermissions :one
-SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at FROM channel_permissions
-WHERE channel_id = $1 AND user_id = $2 LIMIT 1
+SELECT id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
+FROM channel_permissions
+WHERE
+    channel_id = $1
+    AND user_id = $2
+LIMIT 1
 `
 
 type GetUserChannelPermissionsParams struct {
@@ -138,17 +185,23 @@ func (q *Queries) GetUserChannelPermissions(ctx context.Context, arg GetUserChan
 }
 
 const setChannelPermission = `-- name: SetChannelPermission :one
-INSERT INTO channel_permissions (
-    channel_id, role_id, user_id, allow_permissions, deny_permissions
-) VALUES (
-    $1, $2, $3, $4, $5
-)
-ON CONFLICT (channel_id, role_id, user_id)
-DO UPDATE SET
+INSERT INTO
+    channel_permissions (
+        channel_id,
+        role_id,
+        user_id,
+        allow_permissions,
+        deny_permissions
+    )
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (channel_id, role_id, user_id) DO
+UPDATE
+SET
     allow_permissions = EXCLUDED.allow_permissions,
     deny_permissions = EXCLUDED.deny_permissions,
     updated_at = CURRENT_TIMESTAMP
-RETURNING id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
+RETURNING
+    id, channel_id, role_id, user_id, allow_permissions, deny_permissions, created_at, updated_at
 `
 
 type SetChannelPermissionParams struct {

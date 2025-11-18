@@ -25,10 +25,11 @@ message User {
   string background_pic = 12;
   string status = 13; // online, offline, idle, dnd, invisible
   UserStatus user_status = 14;
-  string custom_status = 15;
-  bool is_bot = 16;
-  bool is_verified = 17;
-  bool is_deleted = 18;
+  string operation = 15;
+  string custom_status = 16;
+  bool is_bot = 17;
+  bool is_verified = 18;
+  bool is_deleted = 19;
 }
 
 message UserPresence {

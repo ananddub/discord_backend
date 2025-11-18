@@ -1,172 +1,194 @@
 syntax = "proto3";
 
 option go_package = "discord/gen/proto/service/dm";
-
+import "schema/message.proto";
 package protoservice.dm;
 
 service DirectMessageService {
-  // DM Channel Management
-  rpc CreateDMChannel(CreateDMChannelRequest) returns (CreateDMChannelResponse);
-  rpc CreateGroupDM(CreateGroupDMRequest) returns (CreateGroupDMResponse);
-  rpc GetDMChannel(GetDMChannelRequest) returns (GetDMChannelResponse);
-  rpc GetUserDMChannels(GetUserDMChannelsRequest) returns (GetUserDMChannelsResponse);
-  rpc CloseDMChannel(CloseDMChannelRequest) returns (CloseDMChannelResponse);
-  
-  // Group DM Management
-  rpc AddUserToGroupDM(AddUserToGroupDMRequest) returns (AddUserToGroupDMResponse);
-  rpc RemoveUserFromGroupDM(RemoveUserFromGroupDMRequest) returns (RemoveUserFromGroupDMResponse);
-  rpc UpdateGroupDM(UpdateGroupDMRequest) returns (UpdateGroupDMResponse);
-  
-  // Message Management
-  rpc SendDM(SendDMRequest) returns (SendDMResponse);
-  rpc GetDMMessages(GetDMMessagesRequest) returns (stream GetDMMessagesResponse);
-  rpc EditDM(EditDMRequest) returns (EditDMResponse);
-  rpc DeleteDM(DeleteDMRequest) returns (DeleteDMResponse);
-  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse);
+   // Message Operations
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc GetMessages(GetMessagesRequest) returns (stream GetMessagesResponse);
+  rpc GetMessage(GetMessageRequest) returns (GetMessageResponse);
+  rpc EditMessage(EditMessageRequest) returns (EditMessageResponse);
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
+
+  // Message Interactions
+  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
+  rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse);
+  rpc GetPinnedMessages(GetPinnedMessagesRequest) returns (GetPinnedMessagesResponse);
+  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse);
+  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse);
+  rpc GetReactions(GetReactionsRequest) returns (GetReactionsResponse);
+
+  // Typing Indicator
+  rpc SendTyping(stream SendTypingRequest) returns (stream SendTypingResponse);
+
+  // Bulk Operations
+  rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse);
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
 }
 
-// DM Channel Messages
-message CreateDMChannelRequest {
-  int32 user_id = 1;
-  int32 recipient_id = 2;
-}
-
-message CreateDMChannelResponse {
-  int32 dm_channel_id = 1;
-  bool success = 2;
-}
-
-message CreateGroupDMRequest {
-  int32 owner_id = 1;
-  repeated int32 user_ids = 2;
-  string name = 3;
-}
-
-message CreateGroupDMResponse {
-  int32 dm_channel_id = 1;
-  bool success = 2;
-}
-
-message GetDMChannelRequest {
-  int32 dm_channel_id = 1;
-}
-
-message GetDMChannelResponse {
-  int32 id = 1;
-  repeated int32 participant_ids = 2;
-  string name = 3;
-  string icon = 4;
-}
-
-message GetUserDMChannelsRequest {
-  int32 user_id = 1;
-}
-
-message GetUserDMChannelsResponse {
-  repeated DMChannelInfo channels = 1;
-}
-
-message DMChannelInfo {
-  int32 id = 1;
-  repeated int32 participant_ids = 2;
-  string name = 3;
-  string icon = 4;
-  int32 last_message_id = 5;
-  int64 last_message_at = 6;
-  int32 unread_count = 7;
-}
-
-message CloseDMChannelRequest {
-  int32 dm_channel_id = 1;
-  int32 user_id = 2;
-}
-
-message CloseDMChannelResponse {
-  bool success = 1;
-}
-
-// Group DM Messages
-message AddUserToGroupDMRequest {
-  int32 dm_channel_id = 1;
-  int32 user_id = 2;
-}
-
-message AddUserToGroupDMResponse {
-  bool success = 1;
-}
-
-message RemoveUserFromGroupDMRequest {
-  int32 dm_channel_id = 1;
-  int32 user_id = 2;
-}
-
-message RemoveUserFromGroupDMResponse {
-  bool success = 1;
-}
-
-message UpdateGroupDMRequest {
-  int32 dm_channel_id = 1;
-  string name = 2;
-  string icon = 3;
-}
-
-message UpdateGroupDMResponse {
-  bool success = 1;
-}
-
-// Message Messages
-message SendDMRequest {
-  int32 dm_channel_id = 1;
-  int32 sender_id = 2;
-  string content = 3;
+message SendMessageRequest {
+  int32 receiver_id = 1 ;
+  int32 sender_id = 2 ;
+  string content = 3 ;
   int32 reply_to_message_id = 4;
-  repeated string attachments = 5; // URLs or base64
 }
 
-message SendDMResponse {
-  int32 message_id = 1;
-  int64 created_at = 2;
-  bool success = 3;
+message SendMessageResponse {
+  protoschema.Message message = 1;
+  bool success = 2;
 }
 
-message GetDMMessagesRequest {
-  int32 dm_channel_id = 1;
-  int32 limit = 2;
-  int32 before_message_id = 3;
-}
-
-message GetDMMessagesResponse {
-  int32 id = 1;
+message GetMessagesRequest {
+  int32 user_id = 1;
   int32 sender_id = 2;
-  string content = 3;
-  bool is_read = 4;
-  bool is_edited = 5;
-  int64 created_at = 6;
+  int32 limit = 3;
+  int32 offset = 4;
 }
 
-message EditDMRequest {
+message GetMessagesResponse {
+  repeated protoschema.Message messages = 1;
+}
+
+message EditMessageRequest {
   int32 message_id = 1;
   string content = 2;
 }
 
-message EditDMResponse {
-  bool success = 1;
+message EditMessageResponse {
+  protoschema.Message message = 1;
+  bool success = 2;
 }
 
-message DeleteDMRequest {
+message DeleteMessageRequest {
   int32 message_id = 1;
 }
 
-message DeleteDMResponse {
+message DeleteMessageResponse {
   bool success = 1;
 }
 
-message MarkAsReadRequest {
-  int32 dm_channel_id = 1;
-  int32 user_id = 2;
-  int32 message_id = 3;
+message GetMessageRequest {
+  int32 message_id = 1;
 }
 
-message MarkAsReadResponse {
+message GetMessageResponse {
+  int32 id = 1;
+  int32 receiver_id = 2;
+  int32 sender_id = 3;
+  string content = 4;
+  bool is_edited = 5;
+  int64 created_at = 6;
+}
+
+// Pin Messages
+message PinMessageRequest {
+  int32 user_id = 1;
+  int32 message_id = 2;
+}
+
+message PinMessageResponse {
   bool success = 1;
+}
+
+message UnpinMessageRequest {
+  int32 user_id = 1;
+  int32 message_id = 2;
+}
+
+message UnpinMessageResponse {
+  bool success = 1;
+}
+
+message GetPinnedMessagesRequest {
+  int32 user_id = 1;
+}
+
+message GetPinnedMessagesResponse {
+  repeated int32 message_ids = 1;
+}
+
+// Reactions
+message AddReactionRequest {
+  int32 message_id = 1;
+  int32 sender_id = 2;
+  string emoji = 3;
+}
+
+message AddReactionResponse {
+  bool success = 1;
+}
+
+message RemoveReactionRequest {
+  int32 message_id = 1;
+  int32 sender_id = 2;
+  string emoji = 3;
+}
+
+message RemoveReactionResponse {
+  bool success = 1;
+}
+
+message GetReactionsRequest {
+  int32 message_id = 1;
+  string emoji = 2; // Optional, get reactions for specific emoji
+}
+
+message GetReactionsResponse {
+  repeated ReactionInfo reactions = 1;
+}
+
+message ReactionInfo {
+  string emoji = 1;
+  int32 count = 2;
+  repeated int32 user_ids = 3;
+}
+
+// Typing Indicator
+message SendTypingRequest {
+  int32 sender_id = 1;
+  bool is_typing = 2;
+  int32 receiver_id = 3;
+}
+
+message SendTypingResponse {
+  int32 sender_id = 1;
+  bool is_typing = 2;
+  int32 receiver_id = 3;
+
+}
+
+// Bulk Operations
+message BulkDeleteMessagesRequest {
+  int32 sender_id = 1;
+  repeated int32 message_ids = 2;
+}
+
+message BulkDeleteMessagesResponse {
+  int32 deleted_count = 1;
+  bool success = 2;
+}
+
+message SearchMessagesRequest {
+  int32 receiver_id = 1;
+  int32 sender_id = 2; // Optional: search across server
+  string query = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message SearchMessagesResponse {
+  repeated MessageSearchResult results = 1;
+  int32 total_results = 2;
+}
+
+message MessageSearchResult {
+  int32 message_id = 1;
+  int32 receiver_id = 2;
+  int32 sender_id = 3;
+  string content = 4;
+  int64 created_at = 5;
+  string context_before = 6;
+  string context_after = 7;
 }

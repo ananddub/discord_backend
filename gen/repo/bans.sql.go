@@ -12,11 +12,17 @@ import (
 )
 
 const createBan = `-- name: CreateBan :one
-INSERT INTO bans (
-    server_id, user_id, moderator_id, reason, expires_at
-) VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
+INSERT INTO
+    bans (
+        server_id,
+        user_id,
+        moderator_id,
+        reason,
+        expires_at
+    )
+VALUES ($1, $2, $3, $4, $5)
+RETURNING
+    id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
 type CreateBanParams struct {
@@ -50,8 +56,13 @@ func (q *Queries) CreateBan(ctx context.Context, arg CreateBanParams) (Ban, erro
 }
 
 const getBan = `-- name: GetBan :one
-SELECT id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at FROM bans
-WHERE server_id = $1 AND user_id = $2 AND is_deleted = FALSE LIMIT 1
+SELECT id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
+FROM bans
+WHERE
+    server_id = $1
+    AND user_id = $2
+    AND is_deleted = FALSE
+LIMIT 1
 `
 
 type GetBanParams struct {
@@ -76,8 +87,11 @@ func (q *Queries) GetBan(ctx context.Context, arg GetBanParams) (Ban, error) {
 }
 
 const getServerBans = `-- name: GetServerBans :many
-SELECT id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at FROM bans
-WHERE server_id = $1 AND is_deleted = FALSE
+SELECT id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
+FROM bans
+WHERE
+    server_id = $1
+    AND is_deleted = FALSE
 ORDER BY created_at DESC
 `
 
@@ -110,9 +124,8 @@ func (q *Queries) GetServerBans(ctx context.Context, serverID int32) ([]Ban, err
 	return items, nil
 }
 
-const hardDeleteBan = `-- name: HardDeleteBan :exec
-DELETE FROM bans
-WHERE server_id = $1 AND user_id = $2
+const hardDeleteBan = `-- name: HardDeleteBan :one
+DELETE FROM bans WHERE server_id = $1 AND user_id = $2 RETURNING id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
 type HardDeleteBanParams struct {
@@ -120,27 +133,60 @@ type HardDeleteBanParams struct {
 	UserID   int32 `json:"user_id"`
 }
 
-func (q *Queries) HardDeleteBan(ctx context.Context, arg HardDeleteBanParams) error {
-	_, err := q.db.Exec(ctx, hardDeleteBan, arg.ServerID, arg.UserID)
-	return err
+func (q *Queries) HardDeleteBan(ctx context.Context, arg HardDeleteBanParams) (Ban, error) {
+	row := q.db.QueryRow(ctx, hardDeleteBan, arg.ServerID, arg.UserID)
+	var i Ban
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.ModeratorID,
+		&i.Reason,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const hardDeleteExpiredBans = `-- name: HardDeleteExpiredBans :exec
+const hardDeleteExpiredBans = `-- name: HardDeleteExpiredBans :one
 DELETE FROM bans
-WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP
+WHERE
+    expires_at IS NOT NULL
+    AND expires_at < CURRENT_TIMESTAMP
+RETURNING
+    id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
-func (q *Queries) HardDeleteExpiredBans(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, hardDeleteExpiredBans)
-	return err
+func (q *Queries) HardDeleteExpiredBans(ctx context.Context) (Ban, error) {
+	row := q.db.QueryRow(ctx, hardDeleteExpiredBans)
+	var i Ban
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.ModeratorID,
+		&i.Reason,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const isUserBanned = `-- name: IsUserBanned :one
-SELECT EXISTS(
-    SELECT 1 FROM bans
-    WHERE server_id = $1 AND user_id = $2 AND is_deleted = FALSE
-    AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
-) AS is_banned
+SELECT EXISTS (
+        SELECT 1
+        FROM bans
+        WHERE
+            server_id = $1
+            AND user_id = $2
+            AND is_deleted = FALSE
+            AND (
+                expires_at IS NULL
+                OR expires_at > CURRENT_TIMESTAMP
+            )
+    ) AS is_banned
 `
 
 type IsUserBannedParams struct {
@@ -155,10 +201,16 @@ func (q *Queries) IsUserBanned(ctx context.Context, arg IsUserBannedParams) (boo
 	return is_banned, err
 }
 
-const restoreBan = `-- name: RestoreBan :exec
+const restoreBan = `-- name: RestoreBan :one
 UPDATE bans
-SET is_deleted = FALSE, updated_at = CURRENT_TIMESTAMP
-WHERE server_id = $1 AND user_id = $2
+SET
+    is_deleted = FALSE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    server_id = $1
+    AND user_id = $2
+RETURNING
+    id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
 type RestoreBanParams struct {
@@ -166,15 +218,32 @@ type RestoreBanParams struct {
 	UserID   int32 `json:"user_id"`
 }
 
-func (q *Queries) RestoreBan(ctx context.Context, arg RestoreBanParams) error {
-	_, err := q.db.Exec(ctx, restoreBan, arg.ServerID, arg.UserID)
-	return err
+func (q *Queries) RestoreBan(ctx context.Context, arg RestoreBanParams) (Ban, error) {
+	row := q.db.QueryRow(ctx, restoreBan, arg.ServerID, arg.UserID)
+	var i Ban
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.ModeratorID,
+		&i.Reason,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const softDeleteBan = `-- name: SoftDeleteBan :exec
+const softDeleteBan = `-- name: SoftDeleteBan :one
 UPDATE bans
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE server_id = $1 AND user_id = $2
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    server_id = $1
+    AND user_id = $2
+RETURNING
+    id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
 type SoftDeleteBanParams struct {
@@ -182,18 +251,47 @@ type SoftDeleteBanParams struct {
 	UserID   int32 `json:"user_id"`
 }
 
-func (q *Queries) SoftDeleteBan(ctx context.Context, arg SoftDeleteBanParams) error {
-	_, err := q.db.Exec(ctx, softDeleteBan, arg.ServerID, arg.UserID)
-	return err
+func (q *Queries) SoftDeleteBan(ctx context.Context, arg SoftDeleteBanParams) (Ban, error) {
+	row := q.db.QueryRow(ctx, softDeleteBan, arg.ServerID, arg.UserID)
+	var i Ban
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.ModeratorID,
+		&i.Reason,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
-const softDeleteExpiredBans = `-- name: SoftDeleteExpiredBans :exec
+const softDeleteExpiredBans = `-- name: SoftDeleteExpiredBans :one
 UPDATE bans
-SET is_deleted = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE expires_at IS NOT NULL AND expires_at < CURRENT_TIMESTAMP AND is_deleted = FALSE
+SET
+    is_deleted = TRUE,
+    updated_at = CURRENT_TIMESTAMP
+WHERE
+    expires_at IS NOT NULL
+    AND expires_at < CURRENT_TIMESTAMP
+    AND is_deleted = FALSE
+RETURNING
+    id, server_id, user_id, moderator_id, reason, expires_at, is_deleted, created_at
 `
 
-func (q *Queries) SoftDeleteExpiredBans(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, softDeleteExpiredBans)
-	return err
+func (q *Queries) SoftDeleteExpiredBans(ctx context.Context) (Ban, error) {
+	row := q.db.QueryRow(ctx, softDeleteExpiredBans)
+	var i Ban
+	err := row.Scan(
+		&i.ID,
+		&i.ServerID,
+		&i.UserID,
+		&i.ModeratorID,
+		&i.Reason,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+		&i.CreatedAt,
+	)
+	return i, err
 }

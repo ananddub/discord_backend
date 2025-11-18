@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-
 	"discord/gen/repo"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -68,15 +67,17 @@ func (r *ChannelRepository) UpdateChannel(ctx context.Context, params repo.Updat
 
 // DeleteChannel deletes a channel
 func (r *ChannelRepository) DeleteChannel(ctx context.Context, id int32) error {
-	return r.queries.SoftDeleteChannel(ctx, id)
+	_, err := r.queries.SoftDeleteChannel(ctx, id)
+	return err
 }
 
 // UpdateChannelPosition updates channel position
 func (r *ChannelRepository) UpdateChannelPosition(ctx context.Context, id int32, position int32) error {
-	return r.queries.UpdateChannelPosition(ctx, repo.UpdateChannelPositionParams{
+	_, err := r.queries.UpdateChannelPosition(ctx, repo.UpdateChannelPositionParams{
 		ID:       id,
 		Position: pgtype.Int4{Int32: position, Valid: true},
 	})
+	return err
 }
 
 // SetChannelPermission sets channel permissions for role or user
@@ -119,23 +120,26 @@ func (r *ChannelRepository) GetUserChannelPermissions(ctx context.Context, chann
 
 // DeleteChannelPermission deletes a channel permission
 func (r *ChannelRepository) DeleteChannelPermission(ctx context.Context, id int32) error {
-	return r.queries.DeleteChannelPermission(ctx, id)
+	_, err := r.queries.DeleteChannelPermission(ctx, id)
+	return err
 }
 
 // DeleteRoleChannelPermissions deletes all channel permissions for a role
 func (r *ChannelRepository) DeleteRoleChannelPermissions(ctx context.Context, channelID, roleID int32) error {
-	return r.queries.DeleteRoleChannelPermissions(ctx, repo.DeleteRoleChannelPermissionsParams{
+	_, err := r.queries.DeleteRoleChannelPermissions(ctx, repo.DeleteRoleChannelPermissionsParams{
 		ChannelID: channelID,
 		RoleID:    pgtype.Int4{Int32: roleID, Valid: true},
 	})
+	return err
 }
 
 // DeleteUserChannelPermissions deletes all channel permissions for a user
 func (r *ChannelRepository) DeleteUserChannelPermissions(ctx context.Context, channelID, userID int32) error {
-	return r.queries.DeleteUserChannelPermissions(ctx, repo.DeleteUserChannelPermissionsParams{
+	_, err := r.queries.DeleteUserChannelPermissions(ctx, repo.DeleteUserChannelPermissionsParams{
 		ChannelID: channelID,
 		UserID:    pgtype.Int4{Int32: userID, Valid: true},
 	})
+	return err
 }
 
 // GetServerMembers gets members of a server
