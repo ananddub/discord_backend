@@ -2,8 +2,8 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS messages (
     id SERIAL PRIMARY KEY,
-    channel_id INTEGER REFERENCES channels (id) ON DELETE CASCADE,
-    receiver_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
+    channel_id INTEGER REFERENCES channels (id) ON DELETE CASCADE DEFAULT null,
+    receiver_id INTEGER REFERENCES users (id) ON DELETE CASCADE DEFAULT null,
     ischannel BOOLEAN DEFAULT FALSE,
     sender_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     content TEXT NOT NULL,

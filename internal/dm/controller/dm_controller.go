@@ -56,7 +56,7 @@ func (c *DMController) SendMessage(ctx context.Context, req *dm.SendMessageReque
 		return &dm.SendMessageResponse{Success: false}, fmt.Errorf("content cannot be empty")
 	}
 
-	message, err := c.service.SendMessage(ctx, req.ReceiverId, req.SenderId, req.Content, &req.ReplyToMessageId, false)
+	message, err := c.service.SendMessage(ctx, req.ReceiverId, req.SenderId, req.Content, req.ReplyToMessageId, false)
 	if err != nil {
 		return &dm.SendMessageResponse{Success: false}, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -323,9 +323,6 @@ func (c *DMController) GetReactions(ctx context.Context, req *dm.GetReactionsReq
 	}, nil
 }
 
-// ==================== BULK OPERATIONS ====================
-
-// BulkDeleteMessages deletes multiple messages
 func (c *DMController) BulkDeleteMessages(ctx context.Context, req *dm.BulkDeleteMessagesRequest) (*dm.BulkDeleteMessagesResponse, error) {
 	if req == nil {
 		return &dm.BulkDeleteMessagesResponse{Success: false}, fmt.Errorf("request cannot be nil")

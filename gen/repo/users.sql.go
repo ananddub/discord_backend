@@ -176,6 +176,66 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteByUsername = `-- name: DeleteByUsername :one
+DELETE FROM users WHERE username = $1 RETURNING id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at
+`
+
+func (q *Queries) DeleteByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRow(ctx, deleteByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.FullName,
+		&i.ProfilePic,
+		&i.Bio,
+		&i.ColorCode,
+		&i.BackgroundColor,
+		&i.BackgroundPic,
+		&i.Status,
+		&i.CustomStatus,
+		&i.IsBot,
+		&i.IsVerified,
+		&i.Is2faEnabled,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteUserById = `-- name: DeleteUserById :one
+DELETE FROM users WHERE id = $1 RETURNING id, username, email, password, full_name, profile_pic, bio, color_code, background_color, background_pic, status, custom_status, is_bot, is_verified, is_2fa_enabled, is_deleted, created_at, updated_at
+`
+
+func (q *Queries) DeleteUserById(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRow(ctx, deleteUserById, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Email,
+		&i.Password,
+		&i.FullName,
+		&i.ProfilePic,
+		&i.Bio,
+		&i.ColorCode,
+		&i.BackgroundColor,
+		&i.BackgroundPic,
+		&i.Status,
+		&i.CustomStatus,
+		&i.IsBot,
+		&i.IsVerified,
+		&i.Is2faEnabled,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const enable2FA = `-- name: Enable2FA :one
 UPDATE users
 SET

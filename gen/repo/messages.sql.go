@@ -83,7 +83,7 @@ INSERT INTO
         mention_everyone,
         ischannel
     )
-VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+VALUES ($1, $2, $3, $4, $5, $6, FALSE)
 RETURNING
     id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
 `
@@ -703,6 +703,49 @@ DELETE FROM messages WHERE id = $1 RETURNING id, channel_id, receiver_id, ischan
 
 func (q *Queries) HardDeleteChatMessage(ctx context.Context, id int32) (Message, error) {
 	row := q.db.QueryRow(ctx, hardDeleteChatMessage, id)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.ChannelID,
+		&i.ReceiverID,
+		&i.Ischannel,
+		&i.SenderID,
+		&i.Content,
+		&i.MessageType,
+		&i.ReplyToMessageID,
+		&i.IsEdited,
+		&i.IsPinned,
+		&i.MentionEveryone,
+		&i.IsDeleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.EditedAt,
+	)
+	return i, err
+}
+
+const hardDeleteChatMessages = `-- name: HardDeleteChatMessages :one
+DELETE FROM messages
+WHERE (
+        sender_id = $1
+        AND receiver_id = $2
+    )
+    OR (
+        sender_id = $2
+        AND receiver_id = $1
+    )
+    AND is_deleted = TRUE
+RETURNING
+    id, channel_id, receiver_id, ischannel, sender_id, content, message_type, reply_to_message_id, is_edited, is_pinned, mention_everyone, is_deleted, created_at, updated_at, edited_at
+`
+
+type HardDeleteChatMessagesParams struct {
+	SenderID   int32       `json:"sender_id"`
+	ReceiverID pgtype.Int4 `json:"receiver_id"`
+}
+
+func (q *Queries) HardDeleteChatMessages(ctx context.Context, arg HardDeleteChatMessagesParams) (Message, error) {
+	row := q.db.QueryRow(ctx, hardDeleteChatMessages, arg.SenderID, arg.ReceiverID)
 	var i Message
 	err := row.Scan(
 		&i.ID,

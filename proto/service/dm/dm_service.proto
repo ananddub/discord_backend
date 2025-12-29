@@ -32,7 +32,7 @@ message SendMessageRequest {
   int32 receiver_id = 1 ;
   int32 sender_id = 2 ;
   string content = 3 ;
-  int32 reply_to_message_id = 4;
+  optional int32 reply_to_message_id = 4;
 }
 
 message SendMessageResponse {

@@ -1,9 +1,13 @@
 package pubsub
 
 import (
+	"fmt"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPubSub(t *testing.T) {
@@ -374,4 +378,56 @@ func TestBulkSubscribeMixedPublish(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Error("Timeout on single channel")
 	}
+}
+
+func TestCh(t *testing.T) {
+	ch := make(chan any, 100)
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		close(ch) // yahi pe close hoga
+	}()
+
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				fmt.Println("channel close ho gaya")
+				return
+			}
+
+		default:
+			fmt.Println("waiting...")
+			time.Sleep(300 * time.Millisecond)
+		}
+	}
+
+}
+
+func TestPointer(t *testing.T) {
+	v := "hello"
+	v1 := &v
+	*v1 = "world"
+	assert.Equal(t, v, "world")
+	v = "hello"
+	assert.Equal(t, *v1, "hello")
+}
+
+func TestGo(t *testing.T) {
+	ch := make(chan int)
+	exec.Command("go --version")
+	go func() {
+		fmt.Println("sending 42")
+		ch <- 42 //wait for reciver
+		fmt.Println("sent 42")
+	}()
+	for i := 0; i < 3; i++ {
+		ch <- 0 //waiting
+		fmt.Println("doing other work", i)
+		time.Sleep(1 * time.Second)
+	}
+	time.Sleep(5 * time.Second)
+	val := <-ch
+	fmt.Println("received", val)
+	time.Sleep(1 * time.Second)
 }

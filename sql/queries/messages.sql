@@ -160,7 +160,7 @@ INSERT INTO
         mention_everyone,
         ischannel
     )
-VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+VALUES ($1, $2, $3, $4, $5, $6, FALSE)
 RETURNING
     *;
 
@@ -267,3 +267,17 @@ WHERE (
     AND is_deleted = FALSE
 ORDER BY created_at DESC
 LIMIT $4;
+
+-- name: HardDeleteChatMessages :one
+DELETE FROM messages
+WHERE (
+        sender_id = $1
+        AND receiver_id = $2
+    )
+    OR (
+        sender_id = $2
+        AND receiver_id = $1
+    )
+    AND is_deleted = TRUE
+RETURNING
+    *;

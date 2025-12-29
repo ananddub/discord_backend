@@ -11,11 +11,9 @@ func ConvertFriendToProto(friend repo.Friend) *schema.Friend {
 		Id:         friend.ID,
 		UserId:     friend.UserID,
 		FriendId:   friend.FriendID,
-		Status:     friend.Status,
-		IsAccepted: friend.Status == "accepted",
-		IsBlocked:  friend.Status == "blocked",
-		IsPending:  friend.Status == "pending",
-		IsRejected: friend.Status == "rejected",
+		IsAccepted: friend.IsAccepted.Bool,
+		IsBlocked:  friend.IsBlocked.Bool,
+		IsPending:  friend.IsPending.Bool,
 		IsFavorite: friend.IsFavorite.Bool,
 		CreatedAt:  friend.CreatedAt.Time.Unix(),
 		UpdatedAt:  friend.UpdatedAt.Time.Unix(),
@@ -44,13 +42,13 @@ func IsMutualFriend(user1Friends, user2Friends []repo.Friend) bool {
 	friendMap := make(map[int32]bool)
 
 	for _, friend := range user1Friends {
-		if friend.Status == "accepted" {
+		if friend.IsAccepted.Bool {
 			friendMap[friend.FriendID] = true
 		}
 	}
 
 	for _, friend := range user2Friends {
-		if friend.Status == "accepted" && friendMap[friend.FriendID] {
+		if friend.IsAccepted.Bool && friendMap[friend.FriendID] {
 			return true
 		}
 	}
@@ -64,13 +62,13 @@ func GetMutualFriends(user1Friends, user2Friends []repo.Friend) []int32 {
 	var mutualFriends []int32
 
 	for _, friend := range user1Friends {
-		if friend.Status == "accepted" {
+		if friend.IsAccepted.Bool {
 			friendMap[friend.FriendID] = true
 		}
 	}
 
 	for _, friend := range user2Friends {
-		if friend.Status == "accepted" && friendMap[friend.FriendID] {
+		if friend.IsAccepted.Bool && friendMap[friend.FriendID] {
 			mutualFriends = append(mutualFriends, friend.FriendID)
 		}
 	}
@@ -82,7 +80,7 @@ func GetMutualFriends(user1Friends, user2Friends []repo.Friend) []int32 {
 func FilterFriendsByStatus(friends []repo.Friend, status string) []repo.Friend {
 	var filtered []repo.Friend
 	for _, friend := range friends {
-		if friend.Status == status {
+		if friend.IsAccepted.Bool {
 			filtered = append(filtered, friend)
 		}
 	}
@@ -93,7 +91,7 @@ func FilterFriendsByStatus(friends []repo.Friend, status string) []repo.Friend {
 func GetFavoriteFriends(friends []repo.Friend) []repo.Friend {
 	var favorites []repo.Friend
 	for _, friend := range friends {
-		if friend.IsFavorite.Bool && friend.Status == "accepted" {
+		if friend.IsFavorite.Bool && friend.IsAccepted.Bool {
 			favorites = append(favorites, friend)
 		}
 	}

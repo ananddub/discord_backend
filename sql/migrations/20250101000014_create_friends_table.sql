@@ -46,3 +46,4 @@ DROP INDEX IF EXISTS idx_friends_friend_id;
 DROP INDEX IF EXISTS idx_friends_user_id;
 
 DROP TABLE IF EXISTS friends;
+-- +goose StatementEnd

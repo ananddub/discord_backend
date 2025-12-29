@@ -7,19 +7,19 @@ import (
 	"discord/config"
 	"discord/gen/repo"
 	commonErrors "discord/internal/common/errors"
-	messageRepo "discord/internal/message/repository"
+	"discord/internal/dm/repository"
 	"discord/pkg/pubsub"
 )
 
 type MessageService struct {
-	messageRepo *messageRepo.MessageRepository
+	messageRepo *repository.DMRepository
 	pubsub      *pubsub.PubSub
 }
 
 func NewMessageService() *MessageService {
 	db := config.GetWriteDb()
 	return &MessageService{
-		messageRepo: messageRepo.NewMessageRepository(db),
+		messageRepo: repository.NewDMRepository(db),
 		pubsub:      pubsub.Get(),
 	}
 }
@@ -30,17 +30,17 @@ func (s *MessageService) SendMessage(ctx context.Context, reciver_id, senderID i
 	}
 
 	if replyToMessageID != nil {
-		_, err := s.messageRepo.GetMessageByID(ctx, *replyToMessageID)
+		_, err := s.messageRepo.GetChatMessageByID(ctx, *replyToMessageID)
 		if err != nil {
 			return repo.Message{}, errors.New("reply message not found")
 		}
 	}
 
-	return s.messageRepo.CreateMessage(ctx, reciver_id, senderID, content, "TEXT", replyToMessageID, mentionEveryone)
+	return s.messageRepo.CreateDMMessage(ctx, reciver_id, senderID, content, "default", replyToMessageID, mentionEveryone)
 }
 
 func (s *MessageService) GetMessage(ctx context.Context, messageID int32) (repo.Message, error) {
-	return s.messageRepo.GetMessageByID(ctx, messageID)
+	return s.messageRepo.GetChatMessageByID(ctx, messageID)
 }
 
 func (s *MessageService) GetMessages(ctx context.Context, receiver_id int32, limit, offset int32, beforeMessageID, afterMessageID *int32) ([]repo.Message, error) {
@@ -59,7 +59,7 @@ func (s *MessageService) GetMessages(ctx context.Context, receiver_id int32, lim
 		return s.messageRepo.GetMessagesAfter(ctx, receiver_id, *afterMessageID, limit)
 	}
 
-	return s.messageRepo.GetChannelMessages(ctx, receiver_id, limit, offset)
+	return s.messageRepo.GetChatMessages(ctx, receiver_id, limit, offset)
 }
 
 func (s *MessageService) EditMessage(ctx context.Context, messageID, userID int32, content string) (repo.Message, error) {

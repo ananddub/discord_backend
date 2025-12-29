@@ -205,3 +205,9 @@ WHERE
         FROM q
     )
     AND u.is_deleted = FALSE;
+
+-- name: DeleteUserById :one
+DELETE FROM users WHERE id = $1 RETURNING *;
+
+-- name: DeleteByUsername :one
+DELETE FROM users WHERE username = $1 RETURNING *;

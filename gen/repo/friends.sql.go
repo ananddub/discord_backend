@@ -181,8 +181,10 @@ func (q *Queries) CreateFriend(ctx context.Context, arg CreateFriendParams) (Fri
 const getAcceptedFriends = `-- name: GetAcceptedFriends :many
 SELECT id, user_id, friend_id, alias_name, is_pending, is_accepted, is_blocked, is_favorite, is_muted, is_deleted, created_at, updated_at
 FROM friends
-WHERE
-    user_id = $1
+WHERE (
+        user_id = $1
+        OR friend_id = $1
+    )
     AND is_accepted = TRUE
     AND is_blocked = FALSE
     AND is_deleted = FALSE

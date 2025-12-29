@@ -2,8 +2,13 @@ package mypg
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
+	"sync"
 	"testing"
+	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 func TestParser(t *testing.T) {
@@ -36,4 +41,42 @@ func TestInterpolate(t *testing.T) {
 		t.Errorf("Expected: %s, Got: %s", expected, result)
 	}
 	fmt.Println("Interpolated Query:", result)
+}
+
+func TestGoRoutine(t *testing.T) {
+
+	// Check available resources
+	fmt.Println("CPU cores:", runtime.NumCPU())
+	fmt.Println("GOMAXPROCS:", runtime.GOMAXPROCS(0))
+
+	var wg sync.WaitGroup
+
+	// Launch 10000 goroutines (light!)
+	for i := 0; i < 10000; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			// This goroutine might run on ANY M+P combination
+			fmt.Printf("G%d on thread %d\n", id, windows.GetCurrentThreadId())
+		}(i)
+	}
+
+	// Only 4-8 OS threads (M) handling 10000 goroutines (G)
+	fmt.Println("OS threads:", runtime.NumGoroutine())
+
+	wg.Wait()
+}
+func tmp(i int) {
+	fmt.Println(i)
+	go goRoutine()
+	tmp(i + 1)
+}
+func goRoutine() {
+	for {
+	}
+}
+
+func TestRec(t *testing.T) {
+	tmp(0)
+	time.Sleep(10 * time.Minute)
 }

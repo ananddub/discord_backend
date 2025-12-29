@@ -1,8 +1,8 @@
 syntax = "proto3";
 option go_package = "discord/gen/proto/service/auth";
 
-import "schema/user.proto";
 package protoservice.auth;
+import "schema/user.proto";
 
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
