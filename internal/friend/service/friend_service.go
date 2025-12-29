@@ -9,11 +9,15 @@ import (
 	commonErrors "discord/internal/common/errors"
 	friendRepo "discord/internal/friend/repository"
 	"discord/pkg/pubsub"
+
+	"github.com/jackc/pgx/v5"
+	"google.golang.org/grpc"
 )
 
 type FriendService struct {
 	friendRepo *friendRepo.FriendRepository
 	pubsub     *pubsub.PubSub
+	grpcClient *grpc.ClientConn
 }
 
 func NewFriendService(friendRepo *friendRepo.FriendRepository) *FriendService {
@@ -28,52 +32,53 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 		return commonErrors.ErrInvalidInput
 	}
 
-	// existing, err := s.friendRepo.GetFriendship(ctx, userID, friendID)
-	// if err == nil {
+	existing, err := s.friendRepo.GetFriendship(ctx, userID, friendID)
+	if err != nil && err != pgx.ErrNoRows {
+		return errors.New("user not found")
+	}
+	if existing.IsAccepted.Bool {
+		return errors.New("already friends")
+	}
+	if existing.IsPending.Bool {
+		return errors.New("friend request already sent")
+	}
+	if existing.IsBlocked.Bool {
+		return errors.New("user is blocked")
+	}
 
-	// 	if existing.Status == "accepted" {
-	// 		return errors.New("already friends")
-	// 	}
-	// 	if existing.Status == "pending" {
-	// 		return errors.New("friend request already sent")
-	// 	}
-	// 	if existing.Status == "blocked" {
-	// 		return errors.New("user is blocked")
-	// 	}
-	// }
-
-	// err = s.friendRepo.CreateFriendship(ctx, userID, friendID, "pending")
-	// if err != nil {
-	// 	return err
-	// }
+	err = s.friendRepo.CreateFriendship(ctx, userID, friendID, "pending")
+	if err != nil {
+		return err
+	}
 	user, err := s.friendRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		return err
 	}
-
+	userschema := schema.User{
+		Id:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		ProfilePic:      user.ProfilePic.String,
+		BackgroundPic:   user.BackgroundPic.String,
+		ColorCode:       user.ColorCode.String,
+		BackgroundColor: user.BackgroundColor.String,
+		Bio:             user.Bio.String,
+		Status:          user.Status,
+		CustomStatus:    user.CustomStatus.String,
+		IsBot:           user.IsBot.Bool,
+		IsVerified:      user.IsVerified.Valid,
+		IsDeleted:       user.IsDeleted.Bool,
+	}
 	friendRequest := &schema.Friend{
 		UserId:     userID,
 		FriendId:   friendID,
 		IsPending:  true,
 		IsAccepted: false,
 		Status:     "pending",
-		User: &schema.User{
-			Id:              user.ID,
-			Username:        user.Username,
-			Email:           user.Email,
-			ProfilePic:      user.ProfilePic.String,
-			BackgroundPic:   user.BackgroundPic.String,
-			ColorCode:       user.ColorCode.String,
-			BackgroundColor: user.BackgroundColor.String,
-			Bio:             user.Bio.String,
-			Status:          user.Status,
-			CustomStatus:    user.CustomStatus.String,
-			IsBot:           user.IsBot.Bool,
-			IsVerified:      user.IsVerified.Valid,
-			IsDeleted:       user.IsDeleted.Bool,
-		},
+		User:       &userschema,
 	}
 
+	//reactive.ChatServiceClient.CreateUser(ctx,&schema2.User{..userschema}):
 	s.publishToFriend(friendID, friendRequest)
 
 	return nil
@@ -86,17 +91,12 @@ func (s *FriendService) AcceptFriendRequest(ctx context.Context, userID, request
 		return commonErrors.ErrNotFound
 	}
 
-	if friendship.Status != "pending" {
+	if friendship.IsPending.Bool != true {
 		return errors.New("no pending friend request")
 	}
 
 	// Update status to accepted for both sides
-	err = s.friendRepo.UpdateFriendStatus(ctx, requesterID, userID, "accepted")
-	if err != nil {
-		return err
-	}
-
-	err = s.friendRepo.CreateFriendship(ctx, userID, requesterID, "accepted")
+	friendship, err = s.friendRepo.AcceptFriendRequest(ctx, userID, requesterID)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, request
 		return commonErrors.ErrNotFound
 	}
 
-	if friendship.Status != "pending" {
+	if friendship.IsPending.Bool != true {
 		return errors.New("no pending friend request")
 	}
 
@@ -222,7 +222,7 @@ func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int32
 func (s *FriendService) BlockUser(ctx context.Context, userID, targetID int32) error {
 
 	existing, err := s.friendRepo.GetFriendship(ctx, userID, targetID)
-	if err == nil && existing.Status == "blocked" {
+	if err == nil && existing.IsBlocked.Bool == true {
 		return errors.New("user already blocked")
 	}
 
@@ -251,7 +251,7 @@ func (s *FriendService) UnblockUser(ctx context.Context, userID, targetID int32)
 		return commonErrors.ErrNotFound
 	}
 
-	if existing.Status != "blocked" {
+	if existing.IsBlocked.Bool != true {
 		return errors.New("user is not blocked")
 	}
 
@@ -267,7 +267,7 @@ func (s *FriendService) UpdateAliasName(ctx context.Context, userID, friendID in
 		return commonErrors.ErrNotFound
 	}
 
-	if friendship.Status != "accepted" {
+	if friendship.IsAccepted.Bool != true {
 		return errors.New("not friends")
 	}
 
@@ -275,8 +275,8 @@ func (s *FriendService) UpdateAliasName(ctx context.Context, userID, friendID in
 }
 
 // GetUserFriends retrieves all friends for a user
-func (s *FriendService) GetUserFriends(ctx context.Context, userID int32) ([]repo.Friend, error) {
-	return s.friendRepo.GetUserFriends(ctx, userID)
+func (s *FriendService) GetAcceptedFriends(ctx context.Context, userID int32) ([]repo.Friend, error) {
+	return s.friendRepo.GetAcceptedFriends(ctx, userID)
 }
 
 // GetPendingFriendRequests retrieves pending friend requests

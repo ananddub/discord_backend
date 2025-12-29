@@ -163,12 +163,12 @@ func (r *UserRepository) BlockUser(ctx context.Context, userID, blockedUserID in
 
 func (r *UserRepository) UnblockUser(ctx context.Context, userID, blockedUserID int32) error {
 	// Update status back to 'accepted' or remove the relationship
-	_, err := r.q.UpdateFriendStatus(ctx, repo.UpdateFriendStatusParams{
-		UserID:   userID,
-		FriendID: blockedUserID,
-		Status:   "none", // or "accepted" if they were friends before
-	})
-	return err
+	// _, err := r.q.UpdateFriendStatus(ctx, repo.UpdateFriendStatusParams{
+	// 	UserID:   userID,
+	// 	FriendID: blockedUserID,
+	// 	Status:   "none", // or "accepted" if they were friends before
+	// })
+	return nil
 }
 
 func (r *UserRepository) GetBlockedUsers(ctx context.Context, userID int32) ([]repo.Friend, error) {

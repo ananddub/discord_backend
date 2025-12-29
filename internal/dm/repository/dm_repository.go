@@ -32,7 +32,7 @@ func (r *DMRepository) CreateDMMessage(ctx context.Context, receiverID, senderID
 		Content:          content,
 		MessageType:      pgtype.Text{String: messageType, Valid: true},
 		ReplyToMessageID: replyTo,
-		MentionEveryone:  pgtype.Bool{Bool: mentionEveryone, Valid: true},
+		MentionEveryone:  pgtype.Bool{Bool: false, Valid: true},
 	})
 }
 
@@ -170,4 +170,54 @@ func (r *DMRepository) DeleteAttachment(ctx context.Context, attachmentID int32)
 func (r *DMRepository) DeleteMessageAttachments(ctx context.Context, messageID int32) error {
 	_, err := r.queries.SoftDeleteMessageAttachments(ctx, messageID)
 	return err
+}
+
+func (r *DMRepository) GetChatMessageByID(ctx context.Context, messageID int32) (repo.Message, error) {
+	return r.queries.GetChatMessageByID(ctx, messageID)
+}
+
+func (r *DMRepository) GetMessageByID(ctx context.Context, messageID int32) (repo.Message, error) {
+	return r.queries.GetChatMessageByID(ctx, messageID)
+}
+
+func (r *DMRepository) GetChatMessages(ctx context.Context, receiverID, limit, offset int32) ([]repo.Message, error) {
+	return r.queries.GetChatMessages(ctx, repo.GetChatMessagesParams{
+		ReceiverID: pgtype.Int4{Int32: receiverID, Valid: true},
+		Limit:      limit,
+		Offset:     offset,
+	})
+}
+
+func (r *DMRepository) GetMessagesBefore(ctx context.Context, receiverID, beforeMessageID, limit int32) ([]repo.Message, error) {
+	return r.queries.GetChatMessagesBefore(ctx, repo.GetChatMessagesBeforeParams{
+		ReceiverID: pgtype.Int4{Int32: receiverID, Valid: true},
+		ID:         beforeMessageID,
+		Limit:      limit,
+	})
+}
+
+func (r *DMRepository) GetMessagesAfter(ctx context.Context, receiverID, afterMessageID, limit int32) ([]repo.Message, error) {
+	return r.queries.GetChatMessagesAfter(ctx, repo.GetChatMessagesAfterParams{
+		ReceiverID: pgtype.Int4{Int32: receiverID, Valid: true},
+		ID:         afterMessageID,
+		Limit:      limit,
+	})
+}
+
+func (r *DMRepository) GetPinnedMessages(ctx context.Context, channelID int32) ([]repo.Message, error) {
+	return r.queries.GetPinnedMessages(ctx, pgtype.Int4{Int32: channelID, Valid: true})
+}
+
+func (r *DMRepository) BulkDeleteMessages(ctx context.Context, messageIDs []int32) error {
+	_, err := r.queries.BulkSoftDeleteMessages(ctx, messageIDs)
+	return err
+}
+
+func (r *DMRepository) SearchMessages(ctx context.Context, channelID int32, query string, limit, offset int32) ([]repo.Message, error) {
+	return r.queries.SearchChatMessages(ctx, repo.SearchChatMessagesParams{
+		ReceiverID: pgtype.Int4{Int32: channelID, Valid: true},
+		Column3:    pgtype.Text{String: query, Valid: true},
+		Limit:      limit,
+		Offset:     offset,
+	})
 }

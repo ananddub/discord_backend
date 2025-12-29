@@ -22,8 +22,10 @@ LIMIT 1;
 -- name: GetAcceptedFriends :many
 SELECT *
 FROM friends
-WHERE
-    user_id = $1
+WHERE (
+        user_id = $1
+        OR friend_id = $1
+    )
     AND is_accepted = TRUE
     AND is_blocked = FALSE
     AND is_deleted = FALSE

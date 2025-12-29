@@ -289,3 +289,10 @@ tasks:
       - echo "🚀 Deploying to production..."
       - # Add your deployment commands here
     deps: [proto,sqlc]
+
+  flatc-gen:
+    desc: Generate FlatBuffers code
+    cmds:
+      - rm -rf ./gen/flatbuf
+      - flatc --go --go-namespace flatbuf -o ./gen ./proto/flatbuf/*.fbs
+      - echo "✅ FlatBuffers code generated"

@@ -22,9 +22,18 @@ func NewFriendController(friendService *friendService.FriendService) *friendPb.F
 	return &grpcController
 }
 
+func NewFriendControllerInstance(friendService *friendService.FriendService) *FriendController {
+	return &FriendController{
+		friendService: friendService,
+	}
+}
+
 func (c *FriendController) SendFriendRequest(ctx context.Context, req *friendPb.SendFriendRequestRequest) (*friendPb.SendFriendRequestResponse, error) {
 	if req.GetUserId() == 0 || req.GetFriendId() == 0 {
 		return nil, commonErrors.ToGRPCError(commonErrors.ErrInvalidInput)
+	}
+	if req.GetUserId() == req.GetFriendId() {
+		return nil, commonErrors.ToGRPCError(commonErrors.ErrDuplicate)
 	}
 
 	err := c.friendService.SendFriendRequest(ctx, req.GetUserId(), req.GetFriendId())
@@ -86,7 +95,7 @@ func (c *FriendController) RemoveFriend(ctx context.Context, req *friendPb.Remov
 }
 
 func (c *FriendController) GetFriends(ctx context.Context, req *friendPb.GetFriendsRequest) (*friendPb.GetFriendsResponse, error) {
-	friends, err := c.friendService.GetUserFriends(ctx, req.GetUserId())
+	friends, err := c.friendService.GetAcceptedFriends(ctx, req.GetUserId())
 	if err != nil {
 		return nil, commonErrors.ToGRPCError(err)
 	}
@@ -97,7 +106,7 @@ func (c *FriendController) GetFriends(ctx context.Context, req *friendPb.GetFrie
 			Id:       friend.ID,
 			UserId:   friend.UserID,
 			FriendId: friend.FriendID,
-			Status:   friend.Status,
+			// Status:   friend.Status,
 		})
 	}
 
@@ -116,7 +125,7 @@ func (c *FriendController) GetPendingRequests(ctx context.Context, req *friendPb
 			Id:       request.ID,
 			UserId:   request.UserID,
 			FriendId: request.FriendID,
-			Status:   request.Status,
+			// Status:   request.Status,
 		})
 	}
 
@@ -135,7 +144,7 @@ func (c *FriendController) GetBlockedUsers(ctx context.Context, req *friendPb.Ge
 			Id:       user.ID,
 			UserId:   user.UserID,
 			FriendId: user.FriendID,
-			Status:   user.Status,
+			// Status:   user.Status,
 		})
 	}
 
